@@ -9,6 +9,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { findBlocklistMatch } from "@/lib/blocklist";
 import {
   cleanOptional,
   companyNameLooksSimilar,
@@ -87,6 +88,10 @@ async function findDuplicate(input: {
       return getDuplicateReason({ similarName: candidate.companyName });
     }
   }
+
+  const blocklistMatch = await findBlocklistMatch(input);
+  if (blocklistMatch)
+    return `Ausschlussliste: ${blocklistMatch.type.toLowerCase()} ${blocklistMatch.value}`;
 
   return null;
 }

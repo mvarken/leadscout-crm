@@ -1,9 +1,10 @@
 "use server";
 
-import { LeadActivityType, LeadStatus, Prisma } from "@prisma/client";
+import { LeadActivityType, LeadStatus, Prisma, ReminderStatus, ReminderType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { findBlocklistMatch } from "@/lib/blocklist";
 import {
   cleanOptional,
   companyNameLooksSimilar,
@@ -12,6 +13,7 @@ import {
   normalizeEmail,
   normalizePhone
 } from "@/lib/lead-utils";
+import { calculateLeadScore } from "@/lib/lead-score";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { checkWebsite } from "@/lib/website-checker";
@@ -111,6 +113,12 @@ async function findDuplicateLead(input: {
 export async function createLead(formData: FormData) {
   const user = await requireUser();
   const data = leadDataFromForm(formData);
+  const blocklistMatch = await findBlocklistMatch(data);
+
+  if (blocklistMatch) {
+    redirect(`/leads?blocked=${blocklistMatch.id}`);
+  }
+
   const duplicate = await findDuplicateLead(data);
 
   if (duplicate) {
@@ -137,6 +145,12 @@ export async function createLead(formData: FormData) {
 export async function updateLead(leadId: string, formData: FormData) {
   const user = await requireUser();
   const data = leadDataFromForm(formData);
+  const blocklistMatch = await findBlocklistMatch(data);
+
+  if (blocklistMatch) {
+    redirect(`/leads/${leadId}?blocked=${blocklistMatch.id}`);
+  }
+
   const duplicate = await findDuplicateLead({ ...data, excludeId: leadId });
 
   if (duplicate) {
@@ -217,7 +231,7 @@ export async function runWebsiteCheck(leadId: string) {
 
   const result = await checkWebsite(lead.website);
 
-  await prisma.lead.update({
+  const updatedLead = await prisma.lead.update({
     where: { id: leadId },
     data: {
       websiteReachable: result.websiteReachable,
@@ -246,6 +260,111 @@ export async function runWebsiteCheck(leadId: string) {
     }
   });
 
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: {
+      leadScore: calculateLeadScore(updatedLead),
+      leadScoreUpdatedAt: new Date()
+    }
+  });
+
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
+}
+
+export async function recalculateLeadScore(leadId: string) {
+  await requireUser();
+  const lead = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
+
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: {
+      leadScore: calculateLeadScore(lead),
+      leadScoreUpdatedAt: new Date()
+    }
+  });
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+}
+
+export async function createReminder(leadId: string, formData: FormData) {
+  const user = await requireUser();
+  const dueAtRaw = z.string().min(1).parse(formData.get("dueAt"));
+  const title = z.string().trim().min(2).max(160).parse(formData.get("title"));
+  const note = cleanOptional(formData.get("note"));
+  const type = z.nativeEnum(ReminderType).parse(formData.get("type") || ReminderType.FOLLOW_UP);
+  const dueAt = new Date(dueAtRaw);
+
+  if (Number.isNaN(dueAt.getTime())) {
+    throw new Error("Ungueltiges Wiedervorlagedatum.");
+  }
+
+  await prisma.$transaction([
+    prisma.reminder.create({
+      data: {
+        leadId,
+        assignedToId: user.id,
+        type,
+        dueAt,
+        title,
+        note
+      }
+    }),
+    prisma.leadActivity.create({
+      data: {
+        leadId,
+        userId: user.id,
+        type: LeadActivityType.NOTE_ADDED,
+        note: `Wiedervorlage erstellt: ${title}`
+      }
+    })
+  ]);
+
+  const nextOpenReminder = await prisma.reminder.findFirst({
+    where: {
+      leadId,
+      status: ReminderStatus.OPEN
+    },
+    orderBy: { dueAt: "asc" }
+  });
+
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: {
+      nextFollowUpAt: nextOpenReminder?.dueAt ?? null
+    }
+  });
+
+  revalidatePath("/wiedervorlagen");
+  revalidatePath(`/leads/${leadId}`);
+}
+
+export async function completeReminder(reminderId: string) {
+  await requireUser();
+  const reminder = await prisma.reminder.update({
+    where: { id: reminderId },
+    data: {
+      status: ReminderStatus.DONE,
+      completedAt: new Date()
+    }
+  });
+
+  const nextOpenReminder = await prisma.reminder.findFirst({
+    where: {
+      leadId: reminder.leadId,
+      status: ReminderStatus.OPEN
+    },
+    orderBy: { dueAt: "asc" }
+  });
+
+  await prisma.lead.update({
+    where: { id: reminder.leadId },
+    data: {
+      nextFollowUpAt: nextOpenReminder?.dueAt ?? null
+    }
+  });
+
+  revalidatePath("/wiedervorlagen");
+  revalidatePath(`/leads/${reminder.leadId}`);
 }

@@ -1,4 +1,4 @@
-import { LeadStatus, Prisma } from "@prisma/client";
+import { BlocklistType, LeadStatus, Prisma } from "@prisma/client";
 import Link from "next/link";
 import { createLead } from "@/app/(protected)/leads/actions";
 import { PageHeader } from "@/components/page-header";
@@ -10,7 +10,15 @@ type LeadsPageProps = {
     q?: string;
     status?: string;
     duplicate?: string;
+    blocked?: string;
   };
+};
+
+const blocklistTypeLabels: Record<BlocklistType, string> = {
+  DOMAIN: "Domain",
+  EMAIL: "E-Mail",
+  PHONE: "Telefon",
+  COMPANY: "Firma"
 };
 
 function statusFromSearch(value?: string) {
@@ -36,7 +44,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       : undefined
   };
 
-  const [leads, duplicateLead] = await Promise.all([
+  const [leads, duplicateLead, blockedEntry] = await Promise.all([
     prisma.lead.findMany({
       where,
       orderBy: { updatedAt: "desc" },
@@ -49,6 +57,8 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         email: true,
         website: true,
         status: true,
+        leadScore: true,
+        nextFollowUpAt: true,
         updatedAt: true
       }
     }),
@@ -56,6 +66,11 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       ? prisma.lead.findUnique({
           where: { id: searchParams.duplicate },
           select: { id: true, companyName: true, city: true, website: true }
+        })
+      : null,
+    searchParams.blocked
+      ? prisma.blocklistEntry.findUnique({
+          where: { id: searchParams.blocked }
         })
       : null
   ]);
@@ -74,6 +89,16 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
             {duplicateLead.companyName}
           </Link>
           {duplicateLead.city ? `, ${duplicateLead.city}` : ""}
+        </div>
+      ) : null}
+
+      {blockedEntry ? (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          Dieser Datensatz steht auf der Ausschlussliste:{" "}
+          <span className="font-semibold">
+            {blocklistTypeLabels[blockedEntry.type]} {blockedEntry.value}
+          </span>
+          .
         </div>
       ) : null}
 
@@ -205,13 +230,15 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[840px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
             <thead className="bg-field text-xs uppercase text-muted">
               <tr>
                 <th className="px-5 py-3 font-semibold">Firma</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3 font-semibold">Kontakt</th>
                 <th className="px-5 py-3 font-semibold">Website</th>
+                <th className="px-5 py-3 font-semibold">Score</th>
+                <th className="px-5 py-3 font-semibold">Wiedervorlage</th>
                 <th className="px-5 py-3 font-semibold">Aktualisiert</th>
               </tr>
             </thead>
@@ -233,6 +260,10 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                     <p>{lead.phone || "Keine Telefonnummer"}</p>
                   </td>
                   <td className="px-5 py-4 text-muted">{lead.website || "Keine Website"}</td>
+                  <td className="px-5 py-4 font-semibold text-ink">{lead.leadScore}</td>
+                  <td className="px-5 py-4 text-muted">
+                    {lead.nextFollowUpAt ? lead.nextFollowUpAt.toLocaleDateString("de-DE") : "-"}
+                  </td>
                   <td className="px-5 py-4 text-muted">
                     {lead.updatedAt.toLocaleDateString("de-DE")}
                   </td>
@@ -240,7 +271,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
               ))}
               {leads.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-8 text-center text-muted" colSpan={5}>
+                  <td className="px-5 py-8 text-center text-muted" colSpan={7}>
                     Noch keine Leads gefunden.
                   </td>
                 </tr>

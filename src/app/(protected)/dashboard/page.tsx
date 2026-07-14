@@ -7,7 +7,7 @@ export default async function DashboardPage() {
     prisma.lead.count({ where: { status: LeadStatus.NEW } }),
     prisma.lead.count({ where: { status: LeadStatus.CONTACTED } }),
     prisma.lead.count({ where: { status: LeadStatus.INTERESTED } }),
-    prisma.lead.count({ where: { status: LeadStatus.FOLLOW_UP } })
+    prisma.reminder.count({ where: { status: "OPEN" } })
   ]);
 
   const cards = [

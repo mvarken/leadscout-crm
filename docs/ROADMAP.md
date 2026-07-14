@@ -96,11 +96,27 @@ Noch bewusst offen:
 
 ## Phase 5: Automatisierung
 
-- Hintergrundjobs
-- Wiedervorlagen
-- erneute Websitepruefung
-- Lead-Score
-- Ausschlussliste
+Status: umgesetzt als erster Automatisierungs-Ausbau
+
+- Wiedervorlagen mit offenen und erledigten Aufgaben
+- Lead-Score mit manueller Neuberechnung und Aktualisierung nach Websitepruefung
+- Ausschlussliste fuer Domains, E-Mail-Adressen, Telefonnummern und Firmennamen
+- Datensammlung respektiert aktive Ausschluesse vor der Lead-Uebernahme
+- Leadlisten zeigen Score und naechste Wiedervorlage
+- Dashboard zaehlt offene Wiedervorlagen aus echten Daten
+
+Abschlusskriterien:
+
+- Wiedervorlagen koennen pro Lead angelegt werden
+- Wiedervorlagen koennen als erledigt markiert werden
+- der naechste offene Termin wird am Lead gespeichert
+- gesperrte Eintraege verhindern neue Leads und blockierte Uebernahmen aus der Datensammlung
+- Lead-Score wird aus technischen Pruefergebnissen und Kontaktinformationen berechnet
+
+Noch bewusst offen:
+
+- echte Hintergrund-Worker fuer zeitgesteuerte Wiederholungen
+- automatische Intervall-Pruefung von Websites ohne manuellen Start
 
 ## Phase 6: Kommunikation
 

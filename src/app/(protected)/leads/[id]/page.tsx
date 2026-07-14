@@ -1,8 +1,10 @@
-import { LeadActivityType } from "@prisma/client";
+import { BlocklistType, LeadActivityType } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   addLeadNote,
+  createReminder,
+  recalculateLeadScore,
   runWebsiteCheck,
   updateLead,
   updateLeadStatus
@@ -17,7 +19,15 @@ type LeadDetailPageProps = {
   };
   searchParams: {
     duplicate?: string;
+    blocked?: string;
   };
+};
+
+const blocklistTypeLabels: Record<BlocklistType, string> = {
+  DOMAIN: "Domain",
+  EMAIL: "E-Mail",
+  PHONE: "Telefon",
+  COMPANY: "Firma"
 };
 
 const activityLabels: Record<LeadActivityType, string> = {
@@ -35,10 +45,14 @@ function booleanLabel(value: boolean | null) {
 }
 
 export default async function LeadDetailPage({ params, searchParams }: LeadDetailPageProps) {
-  const [lead, duplicateLead] = await Promise.all([
+  const [lead, duplicateLead, blockedEntry] = await Promise.all([
     prisma.lead.findUnique({
       where: { id: params.id },
       include: {
+        reminders: {
+          where: { status: "OPEN" },
+          orderBy: { dueAt: "asc" }
+        },
         activities: {
           orderBy: { createdAt: "desc" },
           include: {
@@ -56,6 +70,11 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
           where: { id: searchParams.duplicate },
           select: { id: true, companyName: true, city: true, website: true }
         })
+      : null,
+    searchParams.blocked
+      ? prisma.blocklistEntry.findUnique({
+          where: { id: searchParams.blocked }
+        })
       : null
   ]);
 
@@ -67,6 +86,8 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
   const updateStatusWithId = updateLeadStatus.bind(null, lead.id);
   const addNoteWithId = addLeadNote.bind(null, lead.id);
   const runWebsiteCheckWithId = runWebsiteCheck.bind(null, lead.id);
+  const recalculateLeadScoreWithId = recalculateLeadScore.bind(null, lead.id);
+  const createReminderWithId = createReminder.bind(null, lead.id);
 
   return (
     <>
@@ -87,6 +108,16 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
             {duplicateLead.companyName}
           </Link>
           {duplicateLead.city ? `, ${duplicateLead.city}` : ""}
+        </div>
+      ) : null}
+
+      {blockedEntry ? (
+        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          Diese Aenderung wurde durch die Ausschlussliste gestoppt:{" "}
+          <span className="font-semibold">
+            {blocklistTypeLabels[blockedEntry.type]} {blockedEntry.value}
+          </span>
+          .
         </div>
       ) : null}
 
@@ -221,6 +252,28 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
 
         <aside className="space-y-6">
           <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-ink">Lead-Score</h2>
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-4xl font-semibold text-ink">{lead.leadScore}</p>
+                <p className="mt-1 text-sm text-muted">
+                  {lead.leadScoreUpdatedAt
+                    ? `Aktualisiert: ${lead.leadScoreUpdatedAt.toLocaleString("de-DE")}`
+                    : "Noch nicht berechnet"}
+                </p>
+              </div>
+              <form action={recalculateLeadScoreWithId}>
+                <button
+                  className="rounded-md border border-line px-3 py-2 font-semibold text-ink"
+                  type="submit"
+                >
+                  Neu berechnen
+                </button>
+              </form>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
             <h2 className="mb-4 text-lg font-semibold text-ink">Status</h2>
             <form action={updateStatusWithId} className="space-y-4">
               <select
@@ -246,6 +299,61 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
                 Status speichern
               </button>
             </form>
+          </section>
+
+          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-ink">Wiedervorlage</h2>
+            <form action={createReminderWithId} className="space-y-4">
+              <label className="block">
+                <span className="text-sm font-medium text-ink">Art</span>
+                <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="type">
+                  <option value="FOLLOW_UP">Nachfassen</option>
+                  <option value="WEBSITE_RECHECK">Website erneut pruefen</option>
+                  <option value="GENERAL">Allgemein</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-ink">Faellig am</span>
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  name="dueAt"
+                  required
+                  type="datetime-local"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-ink">Titel</span>
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  defaultValue="Nachfassen"
+                  name="title"
+                  required
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-ink">Notiz</span>
+                <textarea
+                  className="mt-1 min-h-20 w-full rounded-md border border-line px-3 py-2"
+                  name="note"
+                />
+              </label>
+              <button
+                className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
+                type="submit"
+              >
+                Wiedervorlage speichern
+              </button>
+            </form>
+            {lead.reminders.length > 0 ? (
+              <div className="mt-5 space-y-3">
+                {lead.reminders.map((reminder) => (
+                  <div className="rounded-md bg-field p-3 text-sm" key={reminder.id}>
+                    <p className="font-semibold text-ink">{reminder.title}</p>
+                    <p className="text-muted">{reminder.dueAt.toLocaleString("de-DE")}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </section>
 
           <section className="rounded-lg border border-line bg-white p-5 shadow-sm">

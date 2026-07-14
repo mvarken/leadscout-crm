@@ -57,6 +57,24 @@ enum DirectoryResultStatus {
   DUPLICATE
 }
 
+enum ReminderStatus {
+  OPEN
+  DONE
+}
+
+enum ReminderType {
+  FOLLOW_UP
+  WEBSITE_RECHECK
+  GENERAL
+}
+
+enum BlocklistType {
+  DOMAIN
+  EMAIL
+  PHONE
+  COMPANY
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
@@ -70,6 +88,7 @@ model User {
   sessions     Session[]
   leadActivities LeadActivity[]
   collectionJobs CollectionJob[]
+  reminders Reminder[]
 
   @@index([active])
   @@index([role])
@@ -115,10 +134,14 @@ model Lead {
   websitePhone String?
   websiteCheckNotes String?
   websiteCheckedAt DateTime?
+  leadScore Int @default(0)
+  leadScoreUpdatedAt DateTime?
+  nextFollowUpAt DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   activities   LeadActivity[]
   directoryResults DirectoryResult[]
+  reminders Reminder[]
 
   @@index([companyName])
   @@index([city])
@@ -126,6 +149,43 @@ model Lead {
   @@index([email])
   @@index([phone])
   @@index([website])
+  @@index([nextFollowUpAt])
+  @@index([leadScore])
+}
+
+model Reminder {
+  id          String         @id @default(cuid())
+  leadId      String
+  lead        Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedToId String?
+  assignedTo   User?         @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  type        ReminderType   @default(FOLLOW_UP)
+  status      ReminderStatus @default(OPEN)
+  dueAt       DateTime
+  title       String
+  note        String?
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([leadId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([dueAt])
+}
+
+model BlocklistEntry {
+  id        String        @id @default(cuid())
+  type      BlocklistType
+  value     String
+  note      String?
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([type, value])
+  @@index([active])
+  @@index([type])
 }
 
 model CollectionJob {
