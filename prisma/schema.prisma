@@ -43,6 +43,20 @@ enum WordpressStatus {
   FAILED
 }
 
+enum CollectionJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum DirectoryResultStatus {
+  NEW
+  CONVERTED
+  IGNORED
+  DUPLICATE
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
@@ -55,6 +69,7 @@ model User {
   lastLoginAt  DateTime?
   sessions     Session[]
   leadActivities LeadActivity[]
+  collectionJobs CollectionJob[]
 
   @@index([active])
   @@index([role])
@@ -103,6 +118,7 @@ model Lead {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   activities   LeadActivity[]
+  directoryResults DirectoryResult[]
 
   @@index([companyName])
   @@index([city])
@@ -110,6 +126,61 @@ model Lead {
   @@index([email])
   @@index([phone])
   @@index([website])
+}
+
+model CollectionJob {
+  id          String              @id @default(cuid())
+  provider    String
+  industry    String
+  country     String              @default("Deutschland")
+  state       String?
+  city        String?
+  postalCode  String?
+  limit       Int                 @default(10)
+  status      CollectionJobStatus @default(PENDING)
+  error       String?
+  createdById String?
+  createdBy   User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  results     DirectoryResult[]
+
+  @@index([provider])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DirectoryResult {
+  id          String                @id @default(cuid())
+  jobId       String
+  job         CollectionJob         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?                 @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  externalId  String?
+  source      String
+  sourceUrl   String?
+  companyName String
+  industry    String?
+  street      String?
+  postalCode  String?
+  city        String?
+  state       String?
+  country     String                @default("Deutschland")
+  phone       String?
+  email       String?
+  website     String?
+  status      DirectoryResultStatus @default(NEW)
+  duplicateReason String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([jobId])
+  @@index([leadId])
+  @@index([source])
+  @@index([status])
+  @@index([companyName])
 }
 
 model LeadActivity {

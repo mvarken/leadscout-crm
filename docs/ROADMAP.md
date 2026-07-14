@@ -73,11 +73,26 @@ Abschlusskriterien:
 
 ## Phase 4: Datensammlung
 
+Status: umgesetzt als gespeicherter Suchauftrag mit Mock-Provider
+
 - Suchauftraege
 - Provider-Schnittstelle
-- erste Quelle nach rechtlicher und technischer Pruefung
+- Mock-Verzeichnis als erste sichere Quelle
 - Ergebnisliste
 - Uebernahme ausgewaehlter Ergebnisse als Lead
+
+Abschlusskriterien:
+
+- Suchauftraege werden gespeichert
+- Provider liefern ein einheitliches Ergebnisformat
+- Ergebnisse werden pro Suchauftrag angezeigt
+- Ergebnisse koennen per Plus als Lead uebernommen werden
+- Duplikate werden vor der Uebernahme markiert
+- Ergebnisse koennen ignoriert werden
+
+Noch bewusst offen:
+
+- echte externe Provider wie 11880 erst nach Pruefung von Nutzungsbedingungen, robots.txt und Zugriffsvorgaben
 
 ## Phase 5: Automatisierung
 
