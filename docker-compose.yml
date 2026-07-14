@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: leadscout-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: leadscout
+      POSTGRES_USER: leadscout
+      POSTGRES_PASSWORD: leadscout_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - leadscout-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leadscout -d leadscout"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  leadscout-postgres-data:
