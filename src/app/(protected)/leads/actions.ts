@@ -14,6 +14,7 @@ import {
 } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { checkWebsite } from "@/lib/website-checker";
 
 const leadSchema = z.object({
   companyName: z.string().trim().min(2, "Firmenname ist erforderlich.").max(160),
@@ -200,5 +201,51 @@ export async function addLeadNote(leadId: string, formData: FormData) {
     }
   });
 
+  revalidatePath(`/leads/${leadId}`);
+}
+
+export async function runWebsiteCheck(leadId: string) {
+  const user = await requireUser();
+  const lead = await prisma.lead.findUniqueOrThrow({
+    where: { id: leadId },
+    select: { website: true }
+  });
+
+  if (!lead.website) {
+    redirect(`/leads/${leadId}?websiteCheck=missing`);
+  }
+
+  const result = await checkWebsite(lead.website);
+
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: {
+      websiteReachable: result.websiteReachable,
+      httpsEnabled: result.httpsEnabled,
+      httpRedirectsToHttps: result.httpRedirectsToHttps,
+      wordpressStatus: result.wordpressStatus,
+      hasImpressum: result.hasImpressum,
+      hasPrivacyPolicy: result.hasPrivacyPolicy,
+      hasContactPage: result.hasContactPage,
+      websiteEmail: result.websiteEmail,
+      websitePhone: result.websitePhone,
+      websiteCheckNotes: [
+        result.finalUrl ? `Finale URL: ${result.finalUrl}` : null,
+        ...result.notes
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      websiteCheckedAt: new Date(),
+      activities: {
+        create: {
+          type: LeadActivityType.WEBSITE_CHECKED,
+          userId: user.id,
+          note: `Websitepruefung ausgefuehrt: ${result.websiteReachable ? "erreichbar" : "nicht erreichbar"}.`
+        }
+      }
+    }
+  });
+
+  revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
 }

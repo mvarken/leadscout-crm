@@ -33,6 +33,14 @@ enum LeadActivityType {
   UPDATED
   STATUS_CHANGED
   NOTE_ADDED
+  WEBSITE_CHECKED
+}
+
+enum WordpressStatus {
+  DETECTED
+  LIKELY
+  NOT_DETECTED
+  FAILED
 }
 
 model User {
@@ -81,6 +89,17 @@ model Lead {
   sourceUrl    String?
   status       LeadStatus     @default(NEW)
   notes        String?
+  websiteReachable Boolean?
+  httpsEnabled Boolean?
+  httpRedirectsToHttps Boolean?
+  wordpressStatus WordpressStatus?
+  hasImpressum Boolean?
+  hasPrivacyPolicy Boolean?
+  hasContactPage Boolean?
+  websiteEmail String?
+  websitePhone String?
+  websiteCheckNotes String?
+  websiteCheckedAt DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   activities   LeadActivity[]

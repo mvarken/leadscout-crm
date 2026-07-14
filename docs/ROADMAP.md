@@ -52,6 +52,8 @@ Abschlusskriterien:
 
 ## Phase 3: Websitepruefung
 
+Status: umgesetzt als manuell ausloesbare Lead-Pruefung
+
 - URL-Normalisierung
 - Erreichbarkeit
 - HTTPS/SSL
@@ -60,6 +62,14 @@ Abschlusskriterien:
 - Datenschutz-Erkennung
 - Kontaktseite
 - technische Pruefprotokolle
+
+Abschlusskriterien:
+
+- Websitepruefung kann aus der Lead-Detailseite gestartet werden
+- Ergebnisse werden am Lead gespeichert
+- Historie erhaelt einen Eintrag zur Websitepruefung
+- WordPress wird mit mehreren HTML-Signalen erkannt
+- Impressum, Datenschutz, Kontaktseite, E-Mail und Telefonnummer werden aus HTML-Hinweisen ermittelt
 
 ## Phase 4: Datensammlung
 

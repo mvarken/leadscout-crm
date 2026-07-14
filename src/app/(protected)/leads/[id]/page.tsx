@@ -1,7 +1,12 @@
 import { LeadActivityType } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { addLeadNote, updateLead, updateLeadStatus } from "@/app/(protected)/leads/actions";
+import {
+  addLeadNote,
+  runWebsiteCheck,
+  updateLead,
+  updateLeadStatus
+} from "@/app/(protected)/leads/actions";
 import { PageHeader } from "@/components/page-header";
 import { leadStatusLabels, leadStatusOptions } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
@@ -19,8 +24,15 @@ const activityLabels: Record<LeadActivityType, string> = {
   CREATED: "Angelegt",
   UPDATED: "Aktualisiert",
   STATUS_CHANGED: "Status geaendert",
-  NOTE_ADDED: "Notiz"
+  NOTE_ADDED: "Notiz",
+  WEBSITE_CHECKED: "Website geprueft"
 };
+
+function booleanLabel(value: boolean | null) {
+  if (value === true) return "Ja";
+  if (value === false) return "Nein";
+  return "Noch nicht geprueft";
+}
 
 export default async function LeadDetailPage({ params, searchParams }: LeadDetailPageProps) {
   const [lead, duplicateLead] = await Promise.all([
@@ -54,6 +66,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
   const updateLeadWithId = updateLead.bind(null, lead.id);
   const updateStatusWithId = updateLeadStatus.bind(null, lead.id);
   const addNoteWithId = addLeadNote.bind(null, lead.id);
+  const runWebsiteCheckWithId = runWebsiteCheck.bind(null, lead.id);
 
   return (
     <>
@@ -250,6 +263,59 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
                 Notiz speichern
               </button>
             </form>
+          </section>
+
+          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-ink">Websitepruefung</h2>
+                <p className="mt-1 text-sm text-muted">
+                  {lead.websiteCheckedAt
+                    ? `Zuletzt geprueft: ${lead.websiteCheckedAt.toLocaleString("de-DE")}`
+                    : "Noch nicht geprueft"}
+                </p>
+              </div>
+            </div>
+            <form action={runWebsiteCheckWithId}>
+              <button
+                className="mb-4 rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={!lead.website}
+                type="submit"
+              >
+                Website pruefen
+              </button>
+            </form>
+            {!lead.website ? (
+              <p className="text-sm text-muted">Keine Website hinterlegt.</p>
+            ) : (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <dt className="text-muted">Erreichbar</dt>
+                <dd className="font-medium text-ink">{booleanLabel(lead.websiteReachable)}</dd>
+                <dt className="text-muted">HTTPS/SSL</dt>
+                <dd className="font-medium text-ink">{booleanLabel(lead.httpsEnabled)}</dd>
+                <dt className="text-muted">HTTP zu HTTPS</dt>
+                <dd className="font-medium text-ink">{booleanLabel(lead.httpRedirectsToHttps)}</dd>
+                <dt className="text-muted">WordPress</dt>
+                <dd className="font-medium text-ink">
+                  {lead.wordpressStatus ?? "Noch nicht geprueft"}
+                </dd>
+                <dt className="text-muted">Impressum</dt>
+                <dd className="font-medium text-ink">{booleanLabel(lead.hasImpressum)}</dd>
+                <dt className="text-muted">Datenschutz</dt>
+                <dd className="font-medium text-ink">{booleanLabel(lead.hasPrivacyPolicy)}</dd>
+                <dt className="text-muted">Kontaktseite</dt>
+                <dd className="font-medium text-ink">{booleanLabel(lead.hasContactPage)}</dd>
+                <dt className="text-muted">E-Mail Website</dt>
+                <dd className="break-all font-medium text-ink">{lead.websiteEmail ?? "-"}</dd>
+                <dt className="text-muted">Telefon Website</dt>
+                <dd className="font-medium text-ink">{lead.websitePhone ?? "-"}</dd>
+              </dl>
+            )}
+            {lead.websiteCheckNotes ? (
+              <p className="mt-4 whitespace-pre-line rounded-md bg-field p-3 text-sm text-muted">
+                {lead.websiteCheckNotes}
+              </p>
+            ) : null}
           </section>
 
           <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
