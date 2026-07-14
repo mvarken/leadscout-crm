@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, ClipboardList, Database, Settings, Timer } from "lucide-react";
+import { BarChart3, ClipboardList, Database, Mail, Settings, Timer } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { href: "/leads", label: "Leads", icon: ClipboardList },
   { href: "/datensammlung", label: "Datensammlung", icon: Database },
   { href: "/wiedervorlagen", label: "Wiedervorlagen", icon: Timer },
+  { href: "/kommunikation", label: "Kommunikation", icon: Mail },
   { href: "/einstellungen", label: "Einstellungen", icon: Settings }
 ];
 

@@ -120,7 +120,25 @@ Noch bewusst offen:
 
 ## Phase 6: Kommunikation
 
+Status: umgesetzt als erster Kommunikations-Ausbau ohne echten Versand
+
 - E-Mail-Vorlagen
-- Versandprotokoll
-- Kontaktverlauf
-- spaetere SMTP- oder Gmail-Anbindung
+- Kommunikationsbereich in der Hauptnavigation
+- Kontaktprotokoll pro Lead
+- Kontaktverlauf am Lead
+- letzte Kontakte im Kommunikationsbereich
+- Kontaktanzahl und letztes Kontaktdatum in Leadliste und Dashboard
+
+Abschlusskriterien:
+
+- Vorlagen koennen angelegt und deaktiviert werden
+- Kontakte koennen am Lead mit Kanal, Richtung, Betreff und Nachricht protokolliert werden
+- Kontaktprotokolle erzeugen Historieneintraege
+- Leads speichern Anzahl und letztes Kontaktdatum
+- es wird kein echter Versand vorgetaeuscht
+
+Noch bewusst offen:
+
+- SMTP- oder Gmail-Anbindung
+- echter E-Mail-Versand aus Vorlagen
+- Antwort-Synchronisierung

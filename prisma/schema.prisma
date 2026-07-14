@@ -34,6 +34,7 @@ enum LeadActivityType {
   STATUS_CHANGED
   NOTE_ADDED
   WEBSITE_CHECKED
+  CONTACT_LOGGED
 }
 
 enum WordpressStatus {
@@ -75,6 +76,19 @@ enum BlocklistType {
   COMPANY
 }
 
+enum ContactChannel {
+  EMAIL
+  PHONE
+  WEBSITE_FORM
+  LINKEDIN
+  OTHER
+}
+
+enum ContactDirection {
+  OUTGOING
+  INCOMING
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
@@ -89,6 +103,8 @@ model User {
   leadActivities LeadActivity[]
   collectionJobs CollectionJob[]
   reminders Reminder[]
+  emailTemplates EmailTemplate[]
+  contactLogs ContactLog[]
 
   @@index([active])
   @@index([role])
@@ -137,11 +153,14 @@ model Lead {
   leadScore Int @default(0)
   leadScoreUpdatedAt DateTime?
   nextFollowUpAt DateTime?
+  lastContactedAt DateTime?
+  contactCount Int @default(0)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   activities   LeadActivity[]
   directoryResults DirectoryResult[]
   reminders Reminder[]
+  contactLogs ContactLog[]
 
   @@index([companyName])
   @@index([city])
@@ -151,6 +170,46 @@ model Lead {
   @@index([website])
   @@index([nextFollowUpAt])
   @@index([leadScore])
+  @@index([lastContactedAt])
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  body        String
+  active      Boolean  @default(true)
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  contactLogs ContactLog[]
+
+  @@index([active])
+  @@index([createdById])
+  @@index([name])
+}
+
+model ContactLog {
+  id          String           @id @default(cuid())
+  leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  templateId  String?
+  template    EmailTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  channel     ContactChannel
+  direction   ContactDirection @default(OUTGOING)
+  subject     String?
+  message     String?
+  contactedAt DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([templateId])
+  @@index([channel])
+  @@index([contactedAt])
 }
 
 model Reminder {

@@ -4,12 +4,14 @@ import { notFound } from "next/navigation";
 import {
   addLeadNote,
   createReminder,
+  logLeadContact,
   recalculateLeadScore,
   runWebsiteCheck,
   updateLead,
   updateLeadStatus
 } from "@/app/(protected)/leads/actions";
 import { PageHeader } from "@/components/page-header";
+import { contactChannelLabels, contactDirectionLabels } from "@/lib/communication";
 import { leadStatusLabels, leadStatusOptions } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
 
@@ -35,7 +37,8 @@ const activityLabels: Record<LeadActivityType, string> = {
   UPDATED: "Aktualisiert",
   STATUS_CHANGED: "Status geaendert",
   NOTE_ADDED: "Notiz",
-  WEBSITE_CHECKED: "Website geprueft"
+  WEBSITE_CHECKED: "Website geprueft",
+  CONTACT_LOGGED: "Kontakt protokolliert"
 };
 
 function booleanLabel(value: boolean | null) {
@@ -52,6 +55,21 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
         reminders: {
           where: { status: "OPEN" },
           orderBy: { dueAt: "asc" }
+        },
+        contactLogs: {
+          orderBy: { contactedAt: "desc" },
+          include: {
+            template: {
+              select: {
+                name: true
+              }
+            },
+            user: {
+              select: {
+                name: true
+              }
+            }
+          }
         },
         activities: {
           orderBy: { createdAt: "desc" },
@@ -88,6 +106,11 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
   const runWebsiteCheckWithId = runWebsiteCheck.bind(null, lead.id);
   const recalculateLeadScoreWithId = recalculateLeadScore.bind(null, lead.id);
   const createReminderWithId = createReminder.bind(null, lead.id);
+  const logLeadContactWithId = logLeadContact.bind(null, lead.id);
+  const emailTemplates = await prisma.emailTemplate.findMany({
+    where: { active: true },
+    orderBy: { name: "asc" }
+  });
 
   return (
     <>
@@ -354,6 +377,129 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
                 ))}
               </div>
             ) : null}
+          </section>
+
+          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-ink">Kontakt protokollieren</h2>
+            <form action={logLeadContactWithId} className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Kanal</span>
+                  <select
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    name="channel"
+                  >
+                    {Object.entries(contactChannelLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Richtung</span>
+                  <select
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    name="direction"
+                  >
+                    {Object.entries(contactDirectionLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-sm font-medium text-ink">Vorlage</span>
+                <select
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  name="templateId"
+                >
+                  <option value="">Ohne Vorlage</option>
+                  {emailTemplates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-ink">Datum</span>
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  name="contactedAt"
+                  type="datetime-local"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-ink">Betreff</span>
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                  name="subject"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-ink">Nachricht / Notiz</span>
+                <textarea
+                  className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
+                  name="message"
+                  required
+                />
+              </label>
+              <button
+                className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
+                type="submit"
+              >
+                Kontakt speichern
+              </button>
+            </form>
+            <div className="mt-5 grid grid-cols-2 gap-3 rounded-md bg-field p-3 text-sm">
+              <div>
+                <p className="text-muted">Kontakte</p>
+                <p className="font-semibold text-ink">{lead.contactCount}</p>
+              </div>
+              <div>
+                <p className="text-muted">Zuletzt</p>
+                <p className="font-semibold text-ink">
+                  {lead.lastContactedAt ? lead.lastContactedAt.toLocaleDateString("de-DE") : "-"}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-ink">Kontaktverlauf</h2>
+            <div className="space-y-4">
+              {lead.contactLogs.map((log) => (
+                <article className="rounded-md bg-field p-3 text-sm" key={log.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-ink">
+                        {contactDirectionLabels[log.direction]} ·{" "}
+                        {contactChannelLabels[log.channel]}
+                      </p>
+                      <p className="mt-1 text-muted">{log.contactedAt.toLocaleString("de-DE")}</p>
+                    </div>
+                    {log.template?.name ? (
+                      <span className="rounded-md border border-line bg-white px-2 py-1 text-xs text-muted">
+                        {log.template.name}
+                      </span>
+                    ) : null}
+                  </div>
+                  {log.subject ? <p className="mt-3 font-medium text-ink">{log.subject}</p> : null}
+                  {log.message ? (
+                    <p className="mt-2 whitespace-pre-line text-muted">{log.message}</p>
+                  ) : null}
+                  {log.user?.name ? (
+                    <p className="mt-2 text-xs text-muted">{log.user.name}</p>
+                  ) : null}
+                </article>
+              ))}
+              {lead.contactLogs.length === 0 ? (
+                <p className="text-sm text-muted">Noch kein Kontakt protokolliert.</p>
+              ) : null}
+            </div>
           </section>
 
           <section className="rounded-lg border border-line bg-white p-5 shadow-sm">

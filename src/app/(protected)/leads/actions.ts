@@ -1,6 +1,14 @@
 "use server";
 
-import { LeadActivityType, LeadStatus, Prisma, ReminderStatus, ReminderType } from "@prisma/client";
+import {
+  ContactChannel,
+  ContactDirection,
+  LeadActivityType,
+  LeadStatus,
+  Prisma,
+  ReminderStatus,
+  ReminderType
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -215,6 +223,51 @@ export async function addLeadNote(leadId: string, formData: FormData) {
     }
   });
 
+  revalidatePath(`/leads/${leadId}`);
+}
+
+export async function logLeadContact(leadId: string, formData: FormData) {
+  const user = await requireUser();
+  const channel = z.nativeEnum(ContactChannel).parse(formData.get("channel"));
+  const direction = z.nativeEnum(ContactDirection).parse(formData.get("direction"));
+  const templateId = cleanOptional(formData.get("templateId"));
+  const subject = cleanOptional(formData.get("subject"));
+  const message = z.string().trim().min(1).max(5000).parse(formData.get("message"));
+  const contactedAtRaw = cleanOptional(formData.get("contactedAt"));
+  const contactedAt = contactedAtRaw ? new Date(contactedAtRaw) : new Date();
+
+  if (Number.isNaN(contactedAt.getTime())) {
+    throw new Error("Ungueltiges Kontaktdatum.");
+  }
+
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: {
+      lastContactedAt: contactedAt,
+      contactCount: { increment: 1 },
+      contactLogs: {
+        create: {
+          userId: user.id,
+          templateId,
+          channel,
+          direction,
+          subject,
+          message,
+          contactedAt
+        }
+      },
+      activities: {
+        create: {
+          type: LeadActivityType.CONTACT_LOGGED,
+          userId: user.id,
+          note: `Kontakt protokolliert: ${channel}${subject ? ` - ${subject}` : ""}`
+        }
+      }
+    }
+  });
+
+  revalidatePath("/kommunikation");
+  revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
 }
 

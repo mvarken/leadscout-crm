@@ -1,6 +1,7 @@
 import { BlocklistType, WordpressStatus } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { normalizeBlocklistValue } from "@/lib/blocklist";
+import { renderCommunicationTemplate } from "@/lib/communication";
 import { calculateLeadScore } from "@/lib/lead-score";
 
 describe("automation helpers", () => {
@@ -43,5 +44,17 @@ describe("automation helpers", () => {
       "+490221123456"
     );
     expect(normalizeBlocklistValue(BlocklistType.COMPANY, " Muster GmbH ")).toBe("muster gmbh");
+  });
+
+  it("renders communication template placeholders", () => {
+    expect(
+      renderCommunicationTemplate("Hallo {{firma}} aus {{stadt}}, Website: {{website}}", {
+        companyName: "Muster GmbH",
+        contactName: null,
+        city: "Koeln",
+        website: "https://example.de",
+        email: "info@example.de"
+      })
+    ).toBe("Hallo Muster GmbH aus Koeln, Website: https://example.de");
   });
 });

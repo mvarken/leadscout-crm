@@ -59,6 +59,8 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         status: true,
         leadScore: true,
         nextFollowUpAt: true,
+        lastContactedAt: true,
+        contactCount: true,
         updatedAt: true
       }
     }),
@@ -230,7 +232,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
             <thead className="bg-field text-xs uppercase text-muted">
               <tr>
                 <th className="px-5 py-3 font-semibold">Firma</th>
@@ -238,6 +240,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 <th className="px-5 py-3 font-semibold">Kontakt</th>
                 <th className="px-5 py-3 font-semibold">Website</th>
                 <th className="px-5 py-3 font-semibold">Score</th>
+                <th className="px-5 py-3 font-semibold">Kontakte</th>
                 <th className="px-5 py-3 font-semibold">Wiedervorlage</th>
                 <th className="px-5 py-3 font-semibold">Aktualisiert</th>
               </tr>
@@ -262,6 +265,14 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                   <td className="px-5 py-4 text-muted">{lead.website || "Keine Website"}</td>
                   <td className="px-5 py-4 font-semibold text-ink">{lead.leadScore}</td>
                   <td className="px-5 py-4 text-muted">
+                    <p className="font-semibold text-ink">{lead.contactCount}</p>
+                    <p>
+                      {lead.lastContactedAt
+                        ? lead.lastContactedAt.toLocaleDateString("de-DE")
+                        : "Noch kein Kontakt"}
+                    </p>
+                  </td>
+                  <td className="px-5 py-4 text-muted">
                     {lead.nextFollowUpAt ? lead.nextFollowUpAt.toLocaleDateString("de-DE") : "-"}
                   </td>
                   <td className="px-5 py-4 text-muted">
@@ -271,7 +282,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
               ))}
               {leads.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-8 text-center text-muted" colSpan={7}>
+                  <td className="px-5 py-8 text-center text-muted" colSpan={8}>
                     Noch keine Leads gefunden.
                   </td>
                 </tr>
