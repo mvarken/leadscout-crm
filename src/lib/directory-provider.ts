@@ -1,3 +1,6 @@
+import { DirectoryProviderStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+
 export type DirectorySearchInput = {
   industry: string;
   country: string;
@@ -6,6 +9,70 @@ export type DirectorySearchInput = {
   postalCode?: string | null;
   limit: number;
 };
+
+export type DirectoryProviderDefinition = {
+  key: string;
+  name: string;
+  websiteUrl?: string;
+  robotsTxtUrl?: string;
+  termsUrl?: string;
+  status: DirectoryProviderStatus;
+  crawlDelaySeconds: number;
+  maxResultsPerJob: number;
+  requiresManualApproval: boolean;
+  notes: string;
+  implemented: boolean;
+};
+
+export const directoryProviderDefinitions: DirectoryProviderDefinition[] = [
+  {
+    key: "mock-directory",
+    name: "Mock-Verzeichnis",
+    websiteUrl: "https://example.local",
+    status: DirectoryProviderStatus.APPROVED,
+    crawlDelaySeconds: 0,
+    maxResultsPerJob: 50,
+    requiresManualApproval: false,
+    notes: "Interne Testquelle ohne externe Abrufe.",
+    implemented: true
+  },
+  {
+    key: "11880-com",
+    name: "11880 Vorbereitung",
+    websiteUrl: "https://www.11880.com",
+    robotsTxtUrl: "https://www.11880.com/robots.txt",
+    termsUrl: "https://www.11880.com",
+    status: DirectoryProviderStatus.NEEDS_REVIEW,
+    crawlDelaySeconds: 30,
+    maxResultsPerJob: 10,
+    requiresManualApproval: true,
+    notes:
+      "Vor einem echten Abruf muessen Nutzungsbedingungen, robots.txt, Zugriffsgeschwindigkeit und moegliche lizenzierte Daten-/API-Loesungen geprueft werden.",
+    implemented: false
+  }
+];
+
+export function getDirectoryProviderDefinition(providerKey: string) {
+  return directoryProviderDefinitions.find((provider) => provider.key === providerKey) ?? null;
+}
+
+export async function ensureDefaultDirectoryProviders() {
+  await prisma.directoryProviderConfig.createMany({
+    data: directoryProviderDefinitions.map((provider) => ({
+      key: provider.key,
+      name: provider.name,
+      websiteUrl: provider.websiteUrl,
+      robotsTxtUrl: provider.robotsTxtUrl,
+      termsUrl: provider.termsUrl,
+      status: provider.status,
+      crawlDelaySeconds: provider.crawlDelaySeconds,
+      maxResultsPerJob: provider.maxResultsPerJob,
+      requiresManualApproval: provider.requiresManualApproval,
+      notes: provider.notes
+    })),
+    skipDuplicates: true
+  });
+}
 
 export type DirectoryCompany = {
   externalId?: string;
@@ -72,7 +139,7 @@ export async function searchMockDirectory(
 
 export async function searchDirectory(provider: string, input: DirectorySearchInput) {
   if (provider !== "mock-directory") {
-    throw new Error("Dieser Provider ist noch nicht implementiert.");
+    throw new Error("Dieser Provider ist vorbereitet, aber noch nicht fuer Abrufe implementiert.");
   }
 
   return searchMockDirectory(input);

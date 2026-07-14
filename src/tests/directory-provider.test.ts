@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { searchMockDirectory } from "@/lib/directory-provider";
+import {
+  directoryProviderDefinitions,
+  getDirectoryProviderDefinition,
+  searchDirectory,
+  searchMockDirectory
+} from "@/lib/directory-provider";
 
 describe("directory provider", () => {
   it("returns normalized mock companies for a search", async () => {
@@ -33,5 +38,25 @@ describe("directory provider", () => {
     });
 
     expect(results).toHaveLength(50);
+  });
+
+  it("keeps 11880 prepared but not implemented", () => {
+    expect(getDirectoryProviderDefinition("11880-com")).toMatchObject({
+      name: "11880 Vorbereitung",
+      implemented: false
+    });
+    expect(directoryProviderDefinitions.some((provider) => provider.key === "mock-directory")).toBe(
+      true
+    );
+  });
+
+  it("does not run unimplemented prepared providers", async () => {
+    await expect(
+      searchDirectory("11880-com", {
+        industry: "Dachdecker",
+        country: "Deutschland",
+        limit: 1
+      })
+    ).rejects.toThrow("noch nicht fuer Abrufe implementiert");
   });
 });

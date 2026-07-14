@@ -94,6 +94,29 @@ Noch bewusst offen:
 
 - echte externe Provider wie 11880 erst nach Pruefung von Nutzungsbedingungen, robots.txt und Zugriffsvorgaben
 
+## Phase 4b: Provider-Vorbereitung
+
+Status: umgesetzt als sichere Vorbereitung fuer echte Quellen
+
+- Provider-Konfigurationen
+- 11880 als vorbereitete, aber nicht startbare Quelle
+- Provider-Status, Abrufpause, Ergebnislimit und Pruefnotiz
+- Standard-Provider werden automatisch angelegt
+- nicht implementierte oder nicht freigegebene Provider koennen keine Suchauftraege starten
+
+Abschlusskriterien:
+
+- Mock-Verzeichnis bleibt als sichere Testquelle nutzbar
+- 11880 ist sichtbar und dokumentierbar
+- 11880 startet keinen Abruf, solange kein Adapter implementiert und freigegeben ist
+- Datensammlung respektiert Provider-Limits
+
+Noch bewusst offen:
+
+- Nutzungsbedingungen und robots.txt konkret pruefen
+- lizenzierte Daten- oder API-Optionen bewerten
+- echten 11880-Adapter erst nach Freigabe implementieren
+
 ## Phase 5: Automatisierung
 
 Status: umgesetzt als erster Automatisierungs-Ausbau

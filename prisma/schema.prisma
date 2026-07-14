@@ -76,6 +76,13 @@ enum BlocklistType {
   COMPANY
 }
 
+enum DirectoryProviderStatus {
+  DRAFT
+  NEEDS_REVIEW
+  APPROVED
+  DISABLED
+}
+
 enum ContactChannel {
   EMAIL
   PHONE
@@ -245,6 +252,25 @@ model BlocklistEntry {
   @@unique([type, value])
   @@index([active])
   @@index([type])
+}
+
+model DirectoryProviderConfig {
+  id                     String                  @id @default(cuid())
+  key                    String                  @unique
+  name                   String
+  websiteUrl             String?
+  robotsTxtUrl           String?
+  termsUrl               String?
+  status                 DirectoryProviderStatus @default(NEEDS_REVIEW)
+  crawlDelaySeconds      Int                     @default(10)
+  maxResultsPerJob       Int                     @default(25)
+  requiresManualApproval Boolean                 @default(true)
+  notes                  String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  @@index([status])
+  @@index([key])
 }
 
 model CollectionJob {

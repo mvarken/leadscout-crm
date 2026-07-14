@@ -3,6 +3,7 @@
 import {
   CollectionJobStatus,
   DirectoryResultStatus,
+  DirectoryProviderStatus,
   LeadActivityType,
   Prisma
 } from "@prisma/client";
@@ -19,17 +20,26 @@ import {
   normalizePhone
 } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
-import { searchDirectory } from "@/lib/directory-provider";
+import { getDirectoryProviderDefinition, searchDirectory } from "@/lib/directory-provider";
 import { requireUser } from "@/lib/session";
 
 const collectionSchema = z.object({
-  provider: z.literal("mock-directory"),
+  provider: z.string().trim().min(2).max(80),
   industry: z.string().trim().min(2).max(120),
   country: z.string().trim().max(120).default("Deutschland"),
   state: z.string().trim().max(120).nullable(),
   city: z.string().trim().max(120).nullable(),
   postalCode: z.string().trim().max(20).nullable(),
   limit: z.coerce.number().int().min(1).max(50)
+});
+
+const providerConfigSchema = z.object({
+  key: z.string().trim().min(2).max(80),
+  status: z.nativeEnum(DirectoryProviderStatus),
+  crawlDelaySeconds: z.coerce.number().int().min(0).max(3600),
+  maxResultsPerJob: z.coerce.number().int().min(1).max(500),
+  requiresManualApproval: z.boolean(),
+  notes: z.string().trim().max(2000).nullable()
 });
 
 function collectionDataFromForm(formData: FormData) {
@@ -42,6 +52,31 @@ function collectionDataFromForm(formData: FormData) {
     postalCode: cleanOptional(formData.get("postalCode")),
     limit: formData.get("limit") || "10"
   });
+}
+
+export async function updateDirectoryProviderConfig(formData: FormData) {
+  await requireUser();
+  const data = providerConfigSchema.parse({
+    key: formData.get("key"),
+    status: formData.get("status"),
+    crawlDelaySeconds: formData.get("crawlDelaySeconds") || "10",
+    maxResultsPerJob: formData.get("maxResultsPerJob") || "25",
+    requiresManualApproval: formData.get("requiresManualApproval") === "on",
+    notes: cleanOptional(formData.get("notes"))
+  });
+
+  await prisma.directoryProviderConfig.update({
+    where: { key: data.key },
+    data: {
+      status: data.status,
+      crawlDelaySeconds: data.crawlDelaySeconds,
+      maxResultsPerJob: data.maxResultsPerJob,
+      requiresManualApproval: data.requiresManualApproval,
+      notes: data.notes
+    }
+  });
+
+  revalidatePath("/datensammlung");
 }
 
 async function findDuplicate(input: {
@@ -99,10 +134,31 @@ async function findDuplicate(input: {
 export async function startCollectionJob(formData: FormData) {
   const user = await requireUser();
   const input = collectionDataFromForm(formData);
+  const providerDefinition = getDirectoryProviderDefinition(input.provider);
+  const providerConfig = await prisma.directoryProviderConfig.findUnique({
+    where: { key: input.provider }
+  });
+
+  if (!providerDefinition || !providerConfig) {
+    throw new Error("Unbekannte Datenquelle.");
+  }
+
+  if (
+    providerConfig.status !== DirectoryProviderStatus.APPROVED ||
+    providerConfig.requiresManualApproval ||
+    !providerDefinition.implemented
+  ) {
+    throw new Error("Diese Datenquelle ist vorbereitet, aber noch nicht fuer Abrufe freigegeben.");
+  }
+
+  const safeInput = {
+    ...input,
+    limit: Math.min(input.limit, providerConfig.maxResultsPerJob)
+  };
 
   const job = await prisma.collectionJob.create({
     data: {
-      ...input,
+      ...safeInput,
       status: CollectionJobStatus.RUNNING,
       createdById: user.id,
       startedAt: new Date()
@@ -110,7 +166,7 @@ export async function startCollectionJob(formData: FormData) {
   });
 
   try {
-    const companies = await searchDirectory(input.provider, input);
+    const companies = await searchDirectory(safeInput.provider, safeInput);
     const rows = await Promise.all(
       companies.map(async (company) => {
         const duplicateReason = await findDuplicate(company);

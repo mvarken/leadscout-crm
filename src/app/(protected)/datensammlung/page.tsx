@@ -1,11 +1,20 @@
-import { CollectionJobStatus, DirectoryResultStatus } from "@prisma/client";
+import {
+  CollectionJobStatus,
+  DirectoryProviderStatus,
+  DirectoryResultStatus
+} from "@prisma/client";
 import Link from "next/link";
 import {
   convertDirectoryResult,
   ignoreDirectoryResult,
-  startCollectionJob
+  startCollectionJob,
+  updateDirectoryProviderConfig
 } from "@/app/(protected)/datensammlung/actions";
 import { PageHeader } from "@/components/page-header";
+import {
+  ensureDefaultDirectoryProviders,
+  getDirectoryProviderDefinition
+} from "@/lib/directory-provider";
 import { prisma } from "@/lib/prisma";
 
 type DatensammlungPageProps = {
@@ -28,8 +37,17 @@ const resultStatusLabels: Record<DirectoryResultStatus, string> = {
   DUPLICATE: "Duplikat"
 };
 
+const providerStatusLabels: Record<DirectoryProviderStatus, string> = {
+  DRAFT: "Entwurf",
+  NEEDS_REVIEW: "Pruefung noetig",
+  APPROVED: "Freigegeben",
+  DISABLED: "Deaktiviert"
+};
+
 export default async function DatensammlungPage({ searchParams }: DatensammlungPageProps) {
-  const [jobs, selectedJob] = await Promise.all([
+  await ensureDefaultDirectoryProviders();
+
+  const [jobs, selectedJob, providers] = await Promise.all([
     prisma.collectionJob.findMany({
       orderBy: { createdAt: "desc" },
       take: 10,
@@ -54,9 +72,27 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
             }
           }
         })
-      : null
+      : null,
+    prisma.directoryProviderConfig.findMany({
+      orderBy: [{ status: "asc" }, { name: "asc" }]
+    })
   ]);
 
+  const sortedProviders = [...providers].sort((first, second) => {
+    const firstReady =
+      first.status === DirectoryProviderStatus.APPROVED &&
+      !first.requiresManualApproval &&
+      getDirectoryProviderDefinition(first.key)?.implemented
+        ? 0
+        : 1;
+    const secondReady =
+      second.status === DirectoryProviderStatus.APPROVED &&
+      !second.requiresManualApproval &&
+      getDirectoryProviderDefinition(second.key)?.implemented
+        ? 0
+        : 1;
+    return firstReady - secondReady || first.name.localeCompare(second.name);
+  });
   const activeJob = selectedJob ?? jobs[0] ?? null;
   const results =
     selectedJob?.results ??
@@ -82,13 +118,147 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
         description="Suchauftraege starten, Ergebnisse pruefen und passende Eintraege als Leads uebernehmen."
       />
 
+      <section className="mb-6 grid gap-4 lg:grid-cols-2">
+        {sortedProviders.map((provider) => {
+          const ready =
+            provider.status === DirectoryProviderStatus.APPROVED &&
+            !provider.requiresManualApproval &&
+            Boolean(getDirectoryProviderDefinition(provider.key)?.implemented);
+          const updateProviderWithKey = updateDirectoryProviderConfig.bind(null);
+
+          return (
+            <article
+              className="rounded-lg border border-line bg-white p-5 shadow-sm"
+              key={provider.id}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-ink">{provider.name}</h2>
+                  <p className="mt-1 text-sm text-muted">
+                    {ready ? "Abrufe moeglich" : "Noch nicht fuer Abrufe freigegeben"}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-md px-2 py-1 text-xs font-semibold ${
+                    ready ? "bg-teal-50 text-brand" : "bg-amber-50 text-amber-900"
+                  }`}
+                >
+                  {providerStatusLabels[provider.status]}
+                </span>
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-muted">Max. Ergebnisse</dt>
+                  <dd className="font-medium text-ink">{provider.maxResultsPerJob}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Pause je Abruf</dt>
+                  <dd className="font-medium text-ink">{provider.crawlDelaySeconds}s</dd>
+                </div>
+              </dl>
+              {provider.notes ? (
+                <p className="mt-4 rounded-md bg-field p-3 text-sm text-muted">{provider.notes}</p>
+              ) : null}
+              <form action={updateProviderWithKey} className="mt-4 grid gap-3 sm:grid-cols-2">
+                <input name="key" type="hidden" value={provider.key} />
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Status</span>
+                  <select
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={provider.status}
+                    name="status"
+                  >
+                    {Object.entries(providerStatusLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Max. Ergebnisse</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={provider.maxResultsPerJob}
+                    max="500"
+                    min="1"
+                    name="maxResultsPerJob"
+                    type="number"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Pause je Abruf in Sekunden</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={provider.crawlDelaySeconds}
+                    max="3600"
+                    min="0"
+                    name="crawlDelaySeconds"
+                    type="number"
+                  />
+                </label>
+                <label className="flex items-end gap-2 text-sm font-medium text-ink">
+                  <input
+                    className="h-4 w-4"
+                    defaultChecked={provider.requiresManualApproval}
+                    name="requiresManualApproval"
+                    type="checkbox"
+                  />
+                  Manuelle Freigabe noetig
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-medium text-ink">Pruefnotiz</span>
+                  <textarea
+                    className="mt-1 min-h-20 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={provider.notes ?? ""}
+                    name="notes"
+                  />
+                </label>
+                <div className="sm:col-span-2">
+                  <button
+                    className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink"
+                    type="submit"
+                  >
+                    Provider speichern
+                  </button>
+                </div>
+              </form>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold text-brand">
+                {provider.websiteUrl ? (
+                  <a href={provider.websiteUrl} rel="noreferrer" target="_blank">
+                    Website
+                  </a>
+                ) : null}
+                {provider.robotsTxtUrl ? (
+                  <a href={provider.robotsTxtUrl} rel="noreferrer" target="_blank">
+                    robots.txt
+                  </a>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+      </section>
+
       <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-ink">Neuen Suchauftrag starten</h2>
         <form action={startCollectionJob} className="grid gap-4 lg:grid-cols-6">
           <label className="block lg:col-span-2">
             <span className="text-sm font-medium text-ink">Quelle</span>
             <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="provider">
-              <option value="mock-directory">Mock-Verzeichnis</option>
+              {sortedProviders.map((provider) => {
+                const ready =
+                  provider.status === DirectoryProviderStatus.APPROVED &&
+                  !provider.requiresManualApproval &&
+                  Boolean(getDirectoryProviderDefinition(provider.key)?.implemented);
+
+                return (
+                  <option disabled={!ready} key={provider.key} value={provider.key}>
+                    {provider.name}
+                    {ready ? "" : " (nicht freigegeben)"}
+                  </option>
+                );
+              })}
             </select>
           </label>
           <label className="block lg:col-span-2">
