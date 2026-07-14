@@ -44,6 +44,10 @@ const providerStatusLabels: Record<DirectoryProviderStatus, string> = {
   DISABLED: "Deaktiviert"
 };
 
+function reviewedLabel(value: Date | null) {
+  return value ? value.toLocaleDateString("de-DE") : "Offen";
+}
+
 export default async function DatensammlungPage({ searchParams }: DatensammlungPageProps) {
   await ensureDefaultDirectoryProviders();
 
@@ -124,6 +128,33 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
             provider.status === DirectoryProviderStatus.APPROVED &&
             !provider.requiresManualApproval &&
             Boolean(getDirectoryProviderDefinition(provider.key)?.implemented);
+          const reviewItems = [
+            {
+              name: "robotsTxtReviewed",
+              label: "robots.txt geprueft",
+              value: provider.robotsTxtReviewedAt
+            },
+            {
+              name: "termsReviewed",
+              label: "Nutzungsbedingungen geprueft",
+              value: provider.termsReviewedAt
+            },
+            {
+              name: "licensedAccessReviewed",
+              label: "API/Lizenzzugang geprueft",
+              value: provider.licensedAccessReviewedAt
+            },
+            {
+              name: "privacyReviewed",
+              label: "Datenschutz und Verwendungszweck geprueft",
+              value: provider.privacyReviewedAt
+            },
+            {
+              name: "reviewCompleted",
+              label: "Freigabeentscheidung dokumentiert",
+              value: provider.reviewCompletedAt
+            }
+          ];
           const updateProviderWithKey = updateDirectoryProviderConfig.bind(null);
 
           return (
@@ -156,10 +187,45 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
                   <dd className="font-medium text-ink">{provider.crawlDelaySeconds}s</dd>
                 </div>
               </dl>
+              {!getDirectoryProviderDefinition(provider.key)?.implemented ? (
+                <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  Diese Quelle ist nur vorbereitet. Ein echter Adapter wird erst nach dokumentierter
+                  Freigabe implementiert.
+                </p>
+              ) : null}
+              <div className="mt-4 rounded-md border border-line">
+                <div className="border-b border-line bg-field px-3 py-2 text-sm font-semibold text-ink">
+                  Provider-Pruefung
+                </div>
+                <div className="divide-y divide-line">
+                  {reviewItems.map((item) => (
+                    <label
+                      className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                      key={item.name}
+                    >
+                      <span className="flex items-center gap-2 font-medium text-ink">
+                        <input
+                          className="h-4 w-4"
+                          defaultChecked={Boolean(item.value)}
+                          form={`provider-${provider.key}`}
+                          name={item.name}
+                          type="checkbox"
+                        />
+                        {item.label}
+                      </span>
+                      <span className="text-muted">{reviewedLabel(item.value)}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               {provider.notes ? (
                 <p className="mt-4 rounded-md bg-field p-3 text-sm text-muted">{provider.notes}</p>
               ) : null}
-              <form action={updateProviderWithKey} className="mt-4 grid gap-3 sm:grid-cols-2">
+              <form
+                action={updateProviderWithKey}
+                className="mt-4 grid gap-3 sm:grid-cols-2"
+                id={`provider-${provider.key}`}
+              >
                 <input name="key" type="hidden" value={provider.key} />
                 <label className="block">
                   <span className="text-sm font-medium text-ink">Status</span>

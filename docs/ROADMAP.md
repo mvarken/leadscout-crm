@@ -101,6 +101,7 @@ Status: umgesetzt als sichere Vorbereitung fuer echte Quellen
 - Provider-Konfigurationen
 - 11880 als vorbereitete, aber nicht startbare Quelle
 - Provider-Status, Abrufpause, Ergebnislimit und Pruefnotiz
+- Provider-Pruefliste fuer robots.txt, Nutzungsbedingungen, API/Lizenzzugang und Datenschutz
 - Standard-Provider werden automatisch angelegt
 - nicht implementierte oder nicht freigegebene Provider koennen keine Suchauftraege starten
 
@@ -110,6 +111,7 @@ Abschlusskriterien:
 - 11880 ist sichtbar und dokumentierbar
 - 11880 startet keinen Abruf, solange kein Adapter implementiert und freigegeben ist
 - Datensammlung respektiert Provider-Limits
+- Freigabeentscheidungen koennen mit Pruefzeitpunkten dokumentiert werden
 
 Noch bewusst offen:
 

@@ -39,8 +39,18 @@ const providerConfigSchema = z.object({
   crawlDelaySeconds: z.coerce.number().int().min(0).max(3600),
   maxResultsPerJob: z.coerce.number().int().min(1).max(500),
   requiresManualApproval: z.boolean(),
+  robotsTxtReviewed: z.boolean(),
+  termsReviewed: z.boolean(),
+  licensedAccessReviewed: z.boolean(),
+  privacyReviewed: z.boolean(),
+  reviewCompleted: z.boolean(),
   notes: z.string().trim().max(2000).nullable()
 });
+
+function reviewedAt(checked: boolean, currentValue?: Date | null) {
+  if (!checked) return null;
+  return currentValue ?? new Date();
+}
 
 function collectionDataFromForm(formData: FormData) {
   return collectionSchema.parse({
@@ -56,12 +66,20 @@ function collectionDataFromForm(formData: FormData) {
 
 export async function updateDirectoryProviderConfig(formData: FormData) {
   await requireUser();
+  const existingProvider = await prisma.directoryProviderConfig.findUniqueOrThrow({
+    where: { key: String(formData.get("key") ?? "") }
+  });
   const data = providerConfigSchema.parse({
     key: formData.get("key"),
     status: formData.get("status"),
     crawlDelaySeconds: formData.get("crawlDelaySeconds") || "10",
     maxResultsPerJob: formData.get("maxResultsPerJob") || "25",
     requiresManualApproval: formData.get("requiresManualApproval") === "on",
+    robotsTxtReviewed: formData.get("robotsTxtReviewed") === "on",
+    termsReviewed: formData.get("termsReviewed") === "on",
+    licensedAccessReviewed: formData.get("licensedAccessReviewed") === "on",
+    privacyReviewed: formData.get("privacyReviewed") === "on",
+    reviewCompleted: formData.get("reviewCompleted") === "on",
     notes: cleanOptional(formData.get("notes"))
   });
 
@@ -72,6 +90,14 @@ export async function updateDirectoryProviderConfig(formData: FormData) {
       crawlDelaySeconds: data.crawlDelaySeconds,
       maxResultsPerJob: data.maxResultsPerJob,
       requiresManualApproval: data.requiresManualApproval,
+      robotsTxtReviewedAt: reviewedAt(data.robotsTxtReviewed, existingProvider.robotsTxtReviewedAt),
+      termsReviewedAt: reviewedAt(data.termsReviewed, existingProvider.termsReviewedAt),
+      licensedAccessReviewedAt: reviewedAt(
+        data.licensedAccessReviewed,
+        existingProvider.licensedAccessReviewedAt
+      ),
+      privacyReviewedAt: reviewedAt(data.privacyReviewed, existingProvider.privacyReviewedAt),
+      reviewCompletedAt: reviewedAt(data.reviewCompleted, existingProvider.reviewCompletedAt),
       notes: data.notes
     }
   });

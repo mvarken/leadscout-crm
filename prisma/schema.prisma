@@ -265,6 +265,11 @@ model DirectoryProviderConfig {
   crawlDelaySeconds      Int                     @default(10)
   maxResultsPerJob       Int                     @default(25)
   requiresManualApproval Boolean                 @default(true)
+  robotsTxtReviewedAt    DateTime?
+  termsReviewedAt        DateTime?
+  licensedAccessReviewedAt DateTime?
+  privacyReviewedAt      DateTime?
+  reviewCompletedAt      DateTime?
   notes                  String?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
