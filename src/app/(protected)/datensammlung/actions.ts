@@ -77,7 +77,7 @@ function reviewedAt(checked: boolean, currentValue?: Date | null) {
 
 function collectionDataFromForm(formData: FormData) {
   return collectionSchema.parse({
-    provider: formData.get("provider") || "mock-directory",
+    provider: formData.get("provider") || "11880-com",
     industry: formData.get("industry"),
     country: cleanOptional(formData.get("country")) ?? "Deutschland",
     state: cleanOptional(formData.get("state")),
@@ -242,7 +242,8 @@ export async function startCollectionJob(formData: FormData) {
   if (
     providerConfig.status !== DirectoryProviderStatus.APPROVED ||
     providerConfig.requiresManualApproval ||
-    !providerDefinition.implemented
+    !providerDefinition.implemented ||
+    !providerDefinition.supportsSearch
   ) {
     throw new Error("Diese Datenquelle ist vorbereitet, aber noch nicht fuer Abrufe freigegeben.");
   }

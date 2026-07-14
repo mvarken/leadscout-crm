@@ -104,16 +104,26 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
     const firstReady =
       first.status === DirectoryProviderStatus.APPROVED &&
       !first.requiresManualApproval &&
-      getDirectoryProviderDefinition(first.key)?.implemented
+      getDirectoryProviderDefinition(first.key)?.implemented &&
+      getDirectoryProviderDefinition(first.key)?.supportsSearch
         ? 0
         : 1;
     const secondReady =
       second.status === DirectoryProviderStatus.APPROVED &&
       !second.requiresManualApproval &&
-      getDirectoryProviderDefinition(second.key)?.implemented
+      getDirectoryProviderDefinition(second.key)?.implemented &&
+      getDirectoryProviderDefinition(second.key)?.supportsSearch
         ? 0
         : 1;
     return firstReady - secondReady || first.name.localeCompare(second.name);
+  });
+  const searchableProviders = sortedProviders.filter((provider) => {
+    const definition = getDirectoryProviderDefinition(provider.key);
+    return (
+      provider.status === DirectoryProviderStatus.APPROVED &&
+      !provider.requiresManualApproval &&
+      Boolean(definition?.implemented && definition.supportsSearch)
+    );
   });
   const activeJob = selectedJob ?? jobs[0] ?? null;
   const results =
@@ -145,7 +155,10 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
           const ready =
             provider.status === DirectoryProviderStatus.APPROVED &&
             !provider.requiresManualApproval &&
-            Boolean(getDirectoryProviderDefinition(provider.key)?.implemented);
+            Boolean(
+              getDirectoryProviderDefinition(provider.key)?.implemented &&
+              getDirectoryProviderDefinition(provider.key)?.supportsSearch
+            );
           const reviewItems = [
             {
               name: "robotsTxtReviewed",
@@ -324,80 +337,77 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
         })}
       </section>
 
-      <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-ink">Neuen Suchauftrag starten</h2>
-        <form action={startCollectionJob} className="grid gap-4 lg:grid-cols-6">
-          <label className="block lg:col-span-2">
-            <span className="text-sm font-medium text-ink">Quelle</span>
-            <select className="mt-1 w-full rounded-md border border-line px-3 py-2" name="provider">
-              {sortedProviders.map((provider) => {
-                const ready =
-                  provider.status === DirectoryProviderStatus.APPROVED &&
-                  !provider.requiresManualApproval &&
-                  Boolean(getDirectoryProviderDefinition(provider.key)?.implemented);
-
-                return (
-                  <option disabled={!ready} key={provider.key} value={provider.key}>
+      {searchableProviders.length > 0 ? (
+        <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-ink">Neuen Suchauftrag starten</h2>
+          <form action={startCollectionJob} className="grid gap-4 lg:grid-cols-6">
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-ink">Quelle</span>
+              <select
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="provider"
+              >
+                {searchableProviders.map((provider) => (
+                  <option key={provider.key} value={provider.key}>
                     {provider.name}
-                    {ready ? "" : " (nicht freigegeben)"}
                   </option>
-                );
-              })}
-            </select>
-          </label>
-          <label className="block lg:col-span-2">
-            <span className="text-sm font-medium text-ink">Branche</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              defaultValue="Dachdecker"
-              name="industry"
-              required
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Limit</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              defaultValue="10"
-              max="50"
-              min="1"
-              name="limit"
-              type="number"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Land</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              defaultValue="Deutschland"
-              name="country"
-            />
-          </label>
-          <label className="block lg:col-span-2">
-            <span className="text-sm font-medium text-ink">Bundesland</span>
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="state" />
-          </label>
-          <label className="block lg:col-span-2">
-            <span className="text-sm font-medium text-ink">Stadt</span>
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="city" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">PLZ</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              name="postalCode"
-            />
-          </label>
-          <div className="flex items-end">
-            <button
-              className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
-              type="submit"
-            >
-              Suche starten
-            </button>
-          </div>
-        </form>
-      </section>
+                ))}
+              </select>
+            </label>
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-ink">Branche</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                defaultValue="Dachdecker"
+                name="industry"
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Limit</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                defaultValue="10"
+                max="50"
+                min="1"
+                name="limit"
+                type="number"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Land</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                defaultValue="Deutschland"
+                name="country"
+              />
+            </label>
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-ink">Bundesland</span>
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="state" />
+            </label>
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-ink">Stadt</span>
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="city" />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">PLZ</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="postalCode"
+              />
+            </label>
+            <div className="flex items-end">
+              <button
+                className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
+                type="submit"
+              >
+                Suche starten
+              </button>
+            </div>
+          </form>
+        </section>
+      ) : null}
 
       <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-ink">11880 manuell suchen</h2>

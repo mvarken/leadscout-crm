@@ -73,11 +73,11 @@ Abschlusskriterien:
 
 ## Phase 4: Datensammlung
 
-Status: umgesetzt als gespeicherter Suchauftrag mit Mock-Provider
+Status: umgesetzt als gespeicherter Suchauftrag mit Provider-Schnittstelle
 
 - Suchauftraege
 - Provider-Schnittstelle
-- Mock-Verzeichnis als erste sichere Quelle
+- vorbereitete Provider-Struktur
 - Ergebnisliste
 - Uebernahme ausgewaehlter Ergebnisse als Lead
 
@@ -109,7 +109,7 @@ Status: umgesetzt als sichere Vorbereitung fuer echte Quellen
 
 Abschlusskriterien:
 
-- Mock-Verzeichnis bleibt als sichere Testquelle nutzbar
+- CSV-Dateien bleiben als sichere Importquelle fuer erlaubte oder lizenzierte Daten nutzbar
 - CSV-Dateien koennen als Datensammlung-Job importiert werden
 - 11880 ist sichtbar und dokumentierbar
 - 11880 kann manuell aus der Datensammlung heraus geoeffnet werden

@@ -22,20 +22,10 @@ export type DirectoryProviderDefinition = {
   requiresManualApproval: boolean;
   notes: string;
   implemented: boolean;
+  supportsSearch: boolean;
 };
 
 export const directoryProviderDefinitions: DirectoryProviderDefinition[] = [
-  {
-    key: "mock-directory",
-    name: "Mock-Verzeichnis",
-    websiteUrl: "https://example.local",
-    status: DirectoryProviderStatus.APPROVED,
-    crawlDelaySeconds: 0,
-    maxResultsPerJob: 50,
-    requiresManualApproval: false,
-    notes: "Interne Testquelle ohne externe Abrufe.",
-    implemented: true
-  },
   {
     key: "11880-com",
     name: "11880 Vorbereitung",
@@ -48,7 +38,8 @@ export const directoryProviderDefinitions: DirectoryProviderDefinition[] = [
     requiresManualApproval: true,
     notes:
       "Vor einem echten Abruf muessen Nutzungsbedingungen, robots.txt, Zugriffsgeschwindigkeit und moegliche lizenzierte Daten-/API-Loesungen geprueft werden.",
-    implemented: false
+    implemented: false,
+    supportsSearch: false
   },
   {
     key: "manual-import",
@@ -58,7 +49,8 @@ export const directoryProviderDefinitions: DirectoryProviderDefinition[] = [
     maxResultsPerJob: 500,
     requiresManualApproval: false,
     notes: "Import fuer erlaubte, lizenzierte oder selbst gepflegte Unternehmensdaten.",
-    implemented: true
+    implemented: true,
+    supportsSearch: false
   }
 ];
 
@@ -100,57 +92,11 @@ export type DirectoryCompany = {
   website?: string;
 };
 
-const companyWords = ["Meister", "Nord", "Altstadt", "Hansa", "Rhein", "City", "Profi", "Muster"];
-const streets = ["Hauptstrasse", "Industrieweg", "Marktstrasse", "Bahnhofstrasse", "Ring"];
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-export async function searchMockDirectory(
+export async function searchDirectory(
+  provider: string,
   input: DirectorySearchInput
 ): Promise<DirectoryCompany[]> {
-  const limit = Math.min(Math.max(input.limit, 1), 50);
-  const city = input.city?.trim() || "Koeln";
-  const state = input.state?.trim() || "NRW";
-  const postalCode = input.postalCode?.trim() || "50667";
-  const industry = input.industry.trim();
-
-  return Array.from({ length: limit }, (_, index) => {
-    const word = companyWords[index % companyWords.length];
-    const street = streets[index % streets.length];
-    const companyName = `${word} ${industry} ${city} ${index + 1} GmbH`;
-    const domain = `${slugify(word)}-${slugify(industry)}-${slugify(city)}-${index + 1}.de`;
-
-    return {
-      externalId: `mock-${slugify(industry)}-${slugify(city)}-${index + 1}`,
-      source: "mock-directory",
-      sourceUrl: `https://example.local/mock/${slugify(industry)}/${slugify(city)}/${index + 1}`,
-      companyName,
-      industry,
-      street: `${street} ${index + 3}`,
-      postalCode,
-      city,
-      state,
-      country: input.country || "Deutschland",
-      phone: `+49 221 100${String(index + 1).padStart(3, "0")}`,
-      email: `info@${domain}`,
-      website: `https://www.${domain}`
-    };
-  });
-}
-
-export async function searchDirectory(provider: string, input: DirectorySearchInput) {
-  if (provider !== "mock-directory") {
-    throw new Error("Dieser Provider ist vorbereitet, aber noch nicht fuer Abrufe implementiert.");
-  }
-
-  return searchMockDirectory(input);
+  void provider;
+  void input;
+  throw new Error("Dieser Provider ist vorbereitet, aber noch nicht fuer Abrufe implementiert.");
 }
