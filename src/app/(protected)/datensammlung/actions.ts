@@ -55,6 +55,21 @@ const manualImportSchema = z.object({
   limit: z.coerce.number().int().min(1).max(500)
 });
 
+const previewLeadSchema = z.object({
+  companyName: z.string().trim().min(2).max(160),
+  industry: z.string().trim().max(120).nullable(),
+  street: z.string().trim().max(160).nullable(),
+  postalCode: z.string().trim().max(20).nullable(),
+  city: z.string().trim().max(120).nullable(),
+  state: z.string().trim().max(120).nullable(),
+  country: z.string().trim().max(120).default("Deutschland"),
+  phone: z.string().trim().max(80).nullable(),
+  email: z.string().trim().email().max(254).nullable().or(z.literal(null)),
+  website: z.string().trim().max(240).nullable(),
+  source: z.string().trim().max(120).nullable(),
+  sourceUrl: z.string().trim().max(300).nullable()
+});
+
 function reviewedAt(checked: boolean, currentValue?: Date | null) {
   if (!checked) return null;
   return currentValue ?? new Date();
@@ -69,6 +84,23 @@ function collectionDataFromForm(formData: FormData) {
     city: cleanOptional(formData.get("city")),
     postalCode: cleanOptional(formData.get("postalCode")),
     limit: formData.get("limit") || "10"
+  });
+}
+
+function previewLeadDataFromForm(formData: FormData) {
+  return previewLeadSchema.parse({
+    companyName: String(formData.get("companyName") ?? ""),
+    industry: cleanOptional(formData.get("industry")),
+    street: cleanOptional(formData.get("street")),
+    postalCode: cleanOptional(formData.get("postalCode")),
+    city: cleanOptional(formData.get("city")),
+    state: cleanOptional(formData.get("state")),
+    country: cleanOptional(formData.get("country")) ?? "Deutschland",
+    phone: cleanOptional(formData.get("phone")),
+    email: normalizeEmail(cleanOptional(formData.get("email"))),
+    website: cleanOptional(formData.get("website")),
+    source: cleanOptional(formData.get("source")),
+    sourceUrl: cleanOptional(formData.get("sourceUrl"))
   });
 }
 
@@ -343,6 +375,33 @@ export async function importDirectoryCsv(formData: FormData) {
 
   revalidatePath("/datensammlung");
   redirect(`/datensammlung?job=${job.id}`);
+}
+
+export async function convertPreviewResult(formData: FormData) {
+  const user = await requireUser();
+  const data = previewLeadDataFromForm(formData);
+  const duplicateReason = await findDuplicate(data);
+
+  if (duplicateReason) {
+    redirect("/datensammlung?previewDuplicate=1");
+  }
+
+  const lead = await prisma.lead.create({
+    data: {
+      ...data,
+      activities: {
+        create: {
+          type: LeadActivityType.CREATED,
+          userId: user.id,
+          note: `Aus Vorschau uebernommen: ${data.source ?? "Datensammlung"}.`
+        }
+      }
+    }
+  });
+
+  revalidatePath("/datensammlung");
+  revalidatePath("/leads");
+  redirect(`/leads/${lead.id}`);
 }
 
 export async function convertDirectoryResult(resultId: string) {

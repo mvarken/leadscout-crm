@@ -6,6 +6,7 @@ import {
 import Link from "next/link";
 import {
   convertDirectoryResult,
+  convertPreviewResult,
   ignoreDirectoryResult,
   importDirectoryCsv,
   startCollectionJob,
@@ -16,7 +17,7 @@ import {
   ensureDefaultDirectoryProviders,
   getDirectoryProviderDefinition
 } from "@/lib/directory-provider";
-import { build11880SearchUrl } from "@/lib/11880-search";
+import { search11880Preview } from "@/lib/11880-search";
 import { prisma } from "@/lib/prisma";
 
 type DatensammlungPageProps = {
@@ -56,8 +57,16 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
   await ensureDefaultDirectoryProviders();
   const search11880Industry = searchParams.q11880?.trim() ?? "";
   const search11880Location = searchParams.loc11880?.trim() ?? "";
-  const search11880Url = search11880Industry
-    ? build11880SearchUrl(search11880Industry, search11880Location)
+  const search11880PreviewResult = search11880Industry
+    ? await search11880Preview({
+        industry: search11880Industry,
+        location: search11880Location,
+        limit: 10
+      }).catch((error) => ({
+        url: null,
+        companies: [],
+        error: error instanceof Error ? error.message : "11880 konnte nicht geladen werden."
+      }))
     : null;
 
   const [jobs, selectedJob, providers] = await Promise.all([
@@ -420,21 +429,95 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
             </button>
           </div>
         </form>
-        {search11880Url ? (
+        {search11880PreviewResult ? (
           <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-            <p className="font-semibold">11880-Suche bereit</p>
+            <p className="font-semibold">11880-Vorschau</p>
             <p className="mt-1">
-              Oeffne die Suche auf 11880, pruefe die Treffer dort manuell und uebernimm erlaubte
-              Daten anschliessend per CSV-Import.
+              Erste Trefferseite aus 11880. Bitte nur einzelne passende Firmen uebernehmen.
             </p>
-            <a
-              className="mt-3 inline-block rounded-md bg-brand px-4 py-2 font-semibold text-white"
-              href={search11880Url}
-              rel="noreferrer"
-              target="_blank"
-            >
-              11880 oeffnen
-            </a>
+            {search11880PreviewResult.url ? (
+              <a
+                className="mt-3 inline-block rounded-md border border-amber-300 bg-white px-3 py-2 font-semibold text-amber-950"
+                href={search11880PreviewResult.url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Original bei 11880 oeffnen
+              </a>
+            ) : null}
+            {"error" in search11880PreviewResult ? (
+              <p className="mt-3 font-semibold text-red-800">{search11880PreviewResult.error}</p>
+            ) : null}
+          </div>
+        ) : null}
+        {search11880PreviewResult?.companies.length ? (
+          <div className="mt-4 overflow-x-auto rounded-lg border border-line">
+            <table className="w-full min-w-[900px] border-collapse bg-white text-left text-sm">
+              <thead className="bg-field text-xs uppercase text-muted">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Firma</th>
+                  <th className="px-5 py-3 font-semibold">Adresse</th>
+                  <th className="px-5 py-3 font-semibold">Kontakt</th>
+                  <th className="px-5 py-3 font-semibold">Aktion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {search11880PreviewResult.companies.map((company) => (
+                  <tr
+                    className="border-t border-line"
+                    key={company.sourceUrl ?? company.companyName}
+                  >
+                    <td className="px-5 py-4">
+                      <p className="font-semibold text-ink">{company.companyName}</p>
+                      {company.sourceUrl ? (
+                        <a
+                          className="mt-1 inline-block text-xs font-semibold text-brand hover:underline"
+                          href={company.sourceUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          11880-Eintrag
+                        </a>
+                      ) : null}
+                    </td>
+                    <td className="px-5 py-4 text-muted">
+                      <p>{company.street || "-"}</p>
+                      <p>{[company.postalCode, company.city].filter(Boolean).join(" ") || "-"}</p>
+                    </td>
+                    <td className="px-5 py-4 text-muted">
+                      <p>{company.email || "Keine E-Mail"}</p>
+                      <p>{company.phone || "Keine Telefonnummer"}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      <form action={convertPreviewResult}>
+                        {Object.entries({
+                          companyName: company.companyName,
+                          industry: company.industry,
+                          street: company.street,
+                          postalCode: company.postalCode,
+                          city: company.city,
+                          state: company.state,
+                          country: company.country,
+                          phone: company.phone,
+                          email: company.email,
+                          website: company.website,
+                          source: company.source,
+                          sourceUrl: company.sourceUrl
+                        }).map(([name, value]) => (
+                          <input key={name} name={name} type="hidden" value={value ?? ""} />
+                        ))}
+                        <button
+                          className="rounded-md bg-brand px-3 py-2 font-semibold text-white"
+                          type="submit"
+                        >
+                          +
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : null}
       </section>
