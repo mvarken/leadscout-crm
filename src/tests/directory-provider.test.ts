@@ -5,6 +5,7 @@ import {
   searchDirectory,
   searchMockDirectory
 } from "@/lib/directory-provider";
+import { build11880SearchUrl } from "@/lib/11880-search";
 import { parseDirectoryCsv } from "@/lib/manual-import";
 
 describe("directory provider", () => {
@@ -94,5 +95,12 @@ describe("directory provider", () => {
     });
 
     expect(results[0].industry).toBe("Sanitaer");
+  });
+
+  it("builds 11880 search urls", () => {
+    expect(build11880SearchUrl("Dachdecker", "Köln")).toBe(
+      "https://www.11880.com/suche/dachdecker/koeln"
+    );
+    expect(build11880SearchUrl("Friseur", null)).toBe("https://www.11880.com/suche/friseur");
   });
 });

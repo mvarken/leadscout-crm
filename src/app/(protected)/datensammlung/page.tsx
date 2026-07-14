@@ -16,11 +16,14 @@ import {
   ensureDefaultDirectoryProviders,
   getDirectoryProviderDefinition
 } from "@/lib/directory-provider";
+import { build11880SearchUrl } from "@/lib/11880-search";
 import { prisma } from "@/lib/prisma";
 
 type DatensammlungPageProps = {
   searchParams: {
     job?: string;
+    q11880?: string;
+    loc11880?: string;
   };
 };
 
@@ -51,6 +54,11 @@ function reviewedLabel(value: Date | null) {
 
 export default async function DatensammlungPage({ searchParams }: DatensammlungPageProps) {
   await ensureDefaultDirectoryProviders();
+  const search11880Industry = searchParams.q11880?.trim() ?? "";
+  const search11880Location = searchParams.loc11880?.trim() ?? "";
+  const search11880Url = search11880Industry
+    ? build11880SearchUrl(search11880Industry, search11880Location)
+    : null;
 
   const [jobs, selectedJob, providers] = await Promise.all([
     prisma.collectionJob.findMany({
@@ -380,6 +388,55 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-lg font-semibold text-ink">11880 manuell suchen</h2>
+        <form action="/datensammlung" className="grid gap-4 lg:grid-cols-[1fr_1fr_auto]">
+          <label className="block">
+            <span className="text-sm font-medium text-ink">Branche</span>
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              defaultValue={search11880Industry || "Dachdecker"}
+              name="q11880"
+              required
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink">Ort</span>
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              defaultValue={search11880Location}
+              name="loc11880"
+              placeholder="z.B. Bonn"
+            />
+          </label>
+          <div className="flex items-end">
+            <button
+              className="rounded-md border border-line px-4 py-2 font-semibold text-ink"
+              type="submit"
+            >
+              Suchlink erstellen
+            </button>
+          </div>
+        </form>
+        {search11880Url ? (
+          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-semibold">11880-Suche bereit</p>
+            <p className="mt-1">
+              Oeffne die Suche auf 11880, pruefe die Treffer dort manuell und uebernimm erlaubte
+              Daten anschliessend per CSV-Import.
+            </p>
+            <a
+              className="mt-3 inline-block rounded-md bg-brand px-4 py-2 font-semibold text-white"
+              href={search11880Url}
+              rel="noreferrer"
+              target="_blank"
+            >
+              11880 oeffnen
+            </a>
+          </div>
+        ) : null}
       </section>
 
       <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">

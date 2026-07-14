@@ -100,6 +100,7 @@ Status: umgesetzt als sichere Vorbereitung fuer echte Quellen
 
 - Provider-Konfigurationen
 - 11880 als vorbereitete, aber nicht startbare Quelle
+- 11880-Suchlink aus Branche und Ort fuer manuelle Recherche
 - manueller CSV-Import fuer erlaubte oder lizenzierte Datensaetze
 - Provider-Status, Abrufpause, Ergebnislimit und Pruefnotiz
 - Provider-Pruefliste fuer robots.txt, Nutzungsbedingungen, API/Lizenzzugang und Datenschutz
@@ -111,6 +112,7 @@ Abschlusskriterien:
 - Mock-Verzeichnis bleibt als sichere Testquelle nutzbar
 - CSV-Dateien koennen als Datensammlung-Job importiert werden
 - 11880 ist sichtbar und dokumentierbar
+- 11880 kann manuell aus der Datensammlung heraus geoeffnet werden
 - 11880 startet keinen Abruf, solange kein Adapter implementiert und freigegeben ist
 - Datensammlung respektiert Provider-Limits
 - Freigabeentscheidungen koennen mit Pruefzeitpunkten dokumentiert werden
