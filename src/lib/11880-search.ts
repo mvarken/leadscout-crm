@@ -40,6 +40,57 @@ type JsonLdListItem = {
   };
 };
 
+type HtmlResultEntry = {
+  companyName?: string;
+  sourceUrl?: string;
+  website?: string;
+};
+
+function decodeHtml(value: string) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&auml;/g, "ä")
+    .replace(/&ouml;/g, "ö")
+    .replace(/&uuml;/g, "ü")
+    .replace(/&Auml;/g, "Ä")
+    .replace(/&Ouml;/g, "Ö")
+    .replace(/&Uuml;/g, "Ü")
+    .replace(/&szlig;/g, "ß")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+function normalizeText(value?: string | null) {
+  return decodeHtml(value ?? "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function normalize11880Url(value?: string | null) {
+  if (!value) return null;
+  if (value.startsWith("/")) return `https://www.11880.com${value}`;
+  return value;
+}
+
+function is11880OwnedUrl(value: string) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return (
+      hostname === "11880.com" || hostname.endsWith(".11880.com") || hostname.includes("11880-")
+    );
+  } catch {
+    return true;
+  }
+}
+
+function isExternalWebsite(value: string) {
+  return /^https?:\/\//i.test(value) && !is11880OwnedUrl(value);
+}
+
 function parseSearchResultsJsonLd(html: string) {
   const scripts: string[] = [];
   const scriptPattern =
@@ -67,21 +118,71 @@ function parseSearchResultsJsonLd(html: string) {
   return [];
 }
 
+function parseHtmlResultEntries(html: string): HtmlResultEntry[] {
+  const entries: HtmlResultEntry[] = [];
+  const entryPattern = /<li\b(?=[^>]*\bresult-list-entry\b)[\s\S]*?<\/li>/gi;
+  let entryMatch = entryPattern.exec(html);
+
+  while (entryMatch) {
+    const entryHtml = entryMatch[0];
+    const nameMatch = /\bdata-name=["']([^"']+)["']/i.exec(entryHtml);
+    const detailMatch =
+      /<a\b[^>]*class=["'][^"']*\bentry-detail-link\b[^"']*["'][^>]*href=["']([^"']+)["']/i.exec(
+        entryHtml
+      );
+    const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>/gi;
+    let anchorMatch = anchorPattern.exec(entryHtml);
+    let website: string | undefined;
+
+    while (anchorMatch) {
+      const href = decodeHtml(anchorMatch[1]);
+      if (isExternalWebsite(href)) {
+        website = href;
+        break;
+      }
+      anchorMatch = anchorPattern.exec(entryHtml);
+    }
+
+    entries.push({
+      companyName: nameMatch ? decodeHtml(nameMatch[1]) : undefined,
+      sourceUrl: normalize11880Url(detailMatch?.[1]) ?? undefined,
+      website
+    });
+
+    entryMatch = entryPattern.exec(html);
+  }
+
+  return entries;
+}
+
 export function parse11880SearchResults(input: {
   html: string;
   industry: string;
   country: string;
   limit: number;
 }): DirectoryCompany[] {
+  const htmlEntries = parseHtmlResultEntries(input.html);
+  const websiteByCompanyName = new Map(
+    htmlEntries
+      .filter((entry) => entry.companyName && entry.website)
+      .map((entry) => [normalizeText(entry.companyName), entry.website])
+  );
+  const websiteBySourceUrl = new Map(
+    htmlEntries
+      .filter((entry) => entry.sourceUrl && entry.website)
+      .map((entry) => [entry.sourceUrl, entry.website])
+  );
+
   return parseSearchResultsJsonLd(input.html)
     .map((listItem) => {
       const item = listItem.item;
       if (!item?.name) return null;
+      const sourceUrl = normalize11880Url(item.url);
 
       return {
-        externalId: item.url,
+        externalId: sourceUrl ?? item.url,
         source: "11880 Vorschau",
-        sourceUrl: item.url,
+        sourceUrl: sourceUrl ?? item.url,
         companyName: item.name,
         industry: input.industry,
         street: item.address?.streetAddress,
@@ -90,7 +191,10 @@ export function parse11880SearchResults(input: {
         state: item.address?.addressRegion,
         country: input.country,
         phone: item.telephone,
-        email: item.email
+        email: item.email,
+        website:
+          (sourceUrl ? websiteBySourceUrl.get(sourceUrl) : undefined) ??
+          websiteByCompanyName.get(normalizeText(item.name))
       };
     })
     .filter(Boolean)

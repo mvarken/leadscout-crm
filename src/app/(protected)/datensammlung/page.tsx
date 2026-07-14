@@ -497,6 +497,18 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
                     <td className="px-5 py-4 text-muted">
                       <p>{company.email || "Keine E-Mail"}</p>
                       <p>{company.phone || "Keine Telefonnummer"}</p>
+                      {company.website ? (
+                        <a
+                          className="mt-1 inline-block font-semibold text-brand hover:underline"
+                          href={company.website}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {company.website}
+                        </a>
+                      ) : (
+                        <p>Keine Website</p>
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       <form action={convertPreviewResult}>

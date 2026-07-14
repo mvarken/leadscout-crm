@@ -119,4 +119,45 @@ describe("directory provider", () => {
       phone: "(0228) 123456"
     });
   });
+
+  it("adds 11880 websites from html result buttons", () => {
+    const html = `
+      <script type="application/ld+json">${JSON.stringify({
+        "@context": "http://schema.org",
+        "@type": "SearchResultsPage",
+        mainEntity: {
+          "@type": "ItemList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              item: {
+                "@type": "LocalBusiness",
+                name: "Staudengärtnerei David Müller",
+                url: "https://www.11880.com/branchenbuch/bonn/132381072B54173993/staudengaertnerei-david-mueller.html",
+                telephone: "(0228) 22790077"
+              }
+            }
+          ]
+        }
+      })}</script>
+      <li class="result-list-entry search-result-list-item" data-name="Staudeng&auml;rtnerei David M&uuml;ller">
+        <a href="/branchenbuch/bonn/132381072B54173993/staudengaertnerei-david-mueller.html" class="result-list-entry-title entry-detail-link">
+          Staudengärtnerei David Müller
+        </a>
+        <a class="customerButton" itemprop="url" href="http://www.dachstauden.com/" title="Online Shop">
+          Online Shop
+        </a>
+      </li>
+    `;
+
+    const results = parse11880SearchResults({
+      html,
+      industry: "Dachdecker",
+      country: "Deutschland",
+      limit: 10
+    });
+
+    expect(results[0].website).toBe("http://www.dachstauden.com/");
+  });
 });
