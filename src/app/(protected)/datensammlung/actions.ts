@@ -21,6 +21,7 @@ import {
 } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
 import { getDirectoryProviderDefinition, searchDirectory } from "@/lib/directory-provider";
+import { parseDirectoryCsv } from "@/lib/manual-import";
 import { requireUser } from "@/lib/session";
 
 const collectionSchema = z.object({
@@ -47,6 +48,13 @@ const providerConfigSchema = z.object({
   notes: z.string().trim().max(2000).nullable()
 });
 
+const manualImportSchema = z.object({
+  sourceName: z.string().trim().min(2).max(120),
+  industry: z.string().trim().max(120).nullable(),
+  country: z.string().trim().max(120).default("Deutschland"),
+  limit: z.coerce.number().int().min(1).max(500)
+});
+
 function reviewedAt(checked: boolean, currentValue?: Date | null) {
   if (!checked) return null;
   return currentValue ?? new Date();
@@ -62,6 +70,36 @@ function collectionDataFromForm(formData: FormData) {
     postalCode: cleanOptional(formData.get("postalCode")),
     limit: formData.get("limit") || "10"
   });
+}
+
+async function createDirectoryResults(
+  jobId: string,
+  companies: Awaited<ReturnType<typeof searchDirectory>>
+) {
+  return Promise.all(
+    companies.map(async (company) => {
+      const duplicateReason = await findDuplicate(company);
+
+      return {
+        jobId,
+        externalId: company.externalId,
+        source: company.source,
+        sourceUrl: company.sourceUrl,
+        companyName: company.companyName,
+        industry: company.industry,
+        street: company.street,
+        postalCode: company.postalCode,
+        city: company.city,
+        state: company.state,
+        country: company.country,
+        phone: company.phone,
+        email: company.email,
+        website: company.website,
+        status: duplicateReason ? DirectoryResultStatus.DUPLICATE : DirectoryResultStatus.NEW,
+        duplicateReason
+      };
+    })
+  );
 }
 
 export async function updateDirectoryProviderConfig(formData: FormData) {
@@ -193,30 +231,7 @@ export async function startCollectionJob(formData: FormData) {
 
   try {
     const companies = await searchDirectory(safeInput.provider, safeInput);
-    const rows = await Promise.all(
-      companies.map(async (company) => {
-        const duplicateReason = await findDuplicate(company);
-
-        return {
-          jobId: job.id,
-          externalId: company.externalId,
-          source: company.source,
-          sourceUrl: company.sourceUrl,
-          companyName: company.companyName,
-          industry: company.industry,
-          street: company.street,
-          postalCode: company.postalCode,
-          city: company.city,
-          state: company.state,
-          country: company.country,
-          phone: company.phone,
-          email: company.email,
-          website: company.website,
-          status: duplicateReason ? DirectoryResultStatus.DUPLICATE : DirectoryResultStatus.NEW,
-          duplicateReason
-        };
-      })
-    );
+    const rows = await createDirectoryResults(job.id, companies);
 
     await prisma.$transaction([
       prisma.directoryResult.createMany({ data: rows }),
@@ -228,6 +243,93 @@ export async function startCollectionJob(formData: FormData) {
         }
       })
     ]);
+  } catch (error) {
+    await prisma.collectionJob.update({
+      where: { id: job.id },
+      data: {
+        status: CollectionJobStatus.FAILED,
+        error: error instanceof Error ? error.message : "Unbekannter Fehler",
+        finishedAt: new Date()
+      }
+    });
+  }
+
+  revalidatePath("/datensammlung");
+  redirect(`/datensammlung?job=${job.id}`);
+}
+
+export async function importDirectoryCsv(formData: FormData) {
+  const user = await requireUser();
+  const data = manualImportSchema.parse({
+    sourceName: formData.get("sourceName") || "Manueller CSV-Import",
+    industry: cleanOptional(formData.get("industry")),
+    country: cleanOptional(formData.get("country")) ?? "Deutschland",
+    limit: formData.get("limit") || "100"
+  });
+  const file = formData.get("file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Bitte eine CSV-Datei auswaehlen.");
+  }
+
+  const providerDefinition = getDirectoryProviderDefinition("manual-import");
+  const providerConfig = await prisma.directoryProviderConfig.findUnique({
+    where: { key: "manual-import" }
+  });
+
+  if (
+    !providerDefinition?.implemented ||
+    !providerConfig ||
+    providerConfig.status !== DirectoryProviderStatus.APPROVED ||
+    providerConfig.requiresManualApproval
+  ) {
+    throw new Error("Manueller Import ist nicht freigegeben.");
+  }
+
+  const csv = await file.text();
+  const companies = parseDirectoryCsv({
+    csv,
+    source: data.sourceName,
+    fallbackIndustry: data.industry,
+    fallbackCountry: data.country,
+    limit: Math.min(data.limit, providerConfig.maxResultsPerJob)
+  });
+
+  const job = await prisma.collectionJob.create({
+    data: {
+      provider: "manual-import",
+      industry: data.industry || data.sourceName,
+      country: data.country,
+      limit: companies.length,
+      status: CollectionJobStatus.RUNNING,
+      createdById: user.id,
+      startedAt: new Date()
+    }
+  });
+
+  try {
+    const rows = await createDirectoryResults(job.id, companies);
+
+    if (rows.length > 0) {
+      await prisma.$transaction([
+        prisma.directoryResult.createMany({ data: rows }),
+        prisma.collectionJob.update({
+          where: { id: job.id },
+          data: {
+            status: CollectionJobStatus.COMPLETED,
+            finishedAt: new Date()
+          }
+        })
+      ]);
+    } else {
+      await prisma.collectionJob.update({
+        where: { id: job.id },
+        data: {
+          status: CollectionJobStatus.COMPLETED,
+          finishedAt: new Date()
+        }
+      });
+    }
   } catch (error) {
     await prisma.collectionJob.update({
       where: { id: job.id },

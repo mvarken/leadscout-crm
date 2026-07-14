@@ -5,6 +5,7 @@ import {
   searchDirectory,
   searchMockDirectory
 } from "@/lib/directory-provider";
+import { parseDirectoryCsv } from "@/lib/manual-import";
 
 describe("directory provider", () => {
   it("returns normalized mock companies for a search", async () => {
@@ -58,5 +59,40 @@ describe("directory provider", () => {
         limit: 1
       })
     ).rejects.toThrow("noch nicht fuer Abrufe implementiert");
+  });
+
+  it("parses semicolon separated directory csv files", () => {
+    const results = parseDirectoryCsv({
+      csv: [
+        "Firma;Branche;Strasse;PLZ;Stadt;Telefon;E-Mail;Homepage",
+        "Muster Dach GmbH;Dachdecker;Hauptstrasse 1;50667;Koeln;+49 221 123;info@example.de;https://example.de"
+      ].join("\n"),
+      source: "Testimport",
+      fallbackCountry: "Deutschland",
+      limit: 10
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      source: "Testimport",
+      companyName: "Muster Dach GmbH",
+      industry: "Dachdecker",
+      postalCode: "50667",
+      city: "Koeln",
+      email: "info@example.de",
+      website: "https://example.de"
+    });
+  });
+
+  it("uses fallback industry for csv imports", () => {
+    const results = parseDirectoryCsv({
+      csv: ["Firma,Stadt", "Beispiel GmbH,Bonn"].join("\n"),
+      source: "Testimport",
+      fallbackIndustry: "Sanitaer",
+      fallbackCountry: "Deutschland",
+      limit: 10
+    });
+
+    expect(results[0].industry).toBe("Sanitaer");
   });
 });

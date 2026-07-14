@@ -49,6 +49,16 @@ export const directoryProviderDefinitions: DirectoryProviderDefinition[] = [
     notes:
       "Vor einem echten Abruf muessen Nutzungsbedingungen, robots.txt, Zugriffsgeschwindigkeit und moegliche lizenzierte Daten-/API-Loesungen geprueft werden.",
     implemented: false
+  },
+  {
+    key: "manual-import",
+    name: "Manueller CSV-Import",
+    status: DirectoryProviderStatus.APPROVED,
+    crawlDelaySeconds: 0,
+    maxResultsPerJob: 500,
+    requiresManualApproval: false,
+    notes: "Import fuer erlaubte, lizenzierte oder selbst gepflegte Unternehmensdaten.",
+    implemented: true
   }
 ];
 

@@ -7,6 +7,7 @@ import Link from "next/link";
 import {
   convertDirectoryResult,
   ignoreDirectoryResult,
+  importDirectoryCsv,
   startCollectionJob,
   updateDirectoryProviderConfig
 } from "@/app/(protected)/datensammlung/actions";
@@ -379,6 +380,69 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-lg font-semibold text-ink">CSV-Daten importieren</h2>
+        <form action={importDirectoryCsv} className="grid gap-4 lg:grid-cols-6">
+          <label className="block lg:col-span-2">
+            <span className="text-sm font-medium text-ink">Quelle / Lizenzhinweis</span>
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              defaultValue="Manueller CSV-Import"
+              name="sourceName"
+              required
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink">Branche</span>
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              name="industry"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink">Land</span>
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              defaultValue="Deutschland"
+              name="country"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-ink">Limit</span>
+            <input
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              defaultValue="100"
+              max="500"
+              min="1"
+              name="limit"
+              type="number"
+            />
+          </label>
+          <label className="block lg:col-span-5">
+            <span className="text-sm font-medium text-ink">CSV-Datei</span>
+            <input
+              accept=".csv,text/csv"
+              className="mt-1 w-full rounded-md border border-line px-3 py-2"
+              name="file"
+              required
+              type="file"
+            />
+          </label>
+          <div className="flex items-end">
+            <button
+              className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
+              type="submit"
+            >
+              Importieren
+            </button>
+          </div>
+        </form>
+        <p className="mt-3 text-sm text-muted">
+          Erkannte Spalten: Firma, Branche, Strasse, PLZ, Stadt, Bundesland, Telefon, E-Mail,
+          Website und Quell-URL.
+        </p>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[300px_1fr]">
