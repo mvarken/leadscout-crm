@@ -11,12 +11,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { findBlocklistMatch } from "@/lib/blocklist";
+import { fetch11880DetailWebsite } from "@/lib/11880-search";
 import {
   cleanOptional,
   companyNameLooksSimilar,
   getDuplicateReason,
   normalizeDomain,
   normalizeEmail,
+  normalizeWebsite,
   normalizePhone
 } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
@@ -98,7 +100,7 @@ function previewLeadDataFromForm(formData: FormData) {
     country: cleanOptional(formData.get("country")) ?? "Deutschland",
     phone: cleanOptional(formData.get("phone")),
     email: normalizeEmail(cleanOptional(formData.get("email"))),
-    website: cleanOptional(formData.get("website")),
+    website: normalizeWebsite(cleanOptional(formData.get("website"))),
     source: cleanOptional(formData.get("source")),
     sourceUrl: cleanOptional(formData.get("sourceUrl"))
   });
@@ -126,7 +128,7 @@ async function createDirectoryResults(
         country: company.country,
         phone: company.phone,
         email: company.email,
-        website: company.website,
+        website: normalizeWebsite(company.website),
         status: duplicateReason ? DirectoryResultStatus.DUPLICATE : DirectoryResultStatus.NEW,
         duplicateReason
       };
@@ -381,7 +383,12 @@ export async function importDirectoryCsv(formData: FormData) {
 export async function convertPreviewResult(formData: FormData) {
   const user = await requireUser();
   const data = previewLeadDataFromForm(formData);
-  const duplicateReason = await findDuplicate(data);
+  const detailWebsite = await fetch11880DetailWebsite(data.sourceUrl);
+  const enrichedData = {
+    ...data,
+    website: detailWebsite ?? data.website
+  };
+  const duplicateReason = await findDuplicate(enrichedData);
 
   if (duplicateReason) {
     redirect("/datensammlung?previewDuplicate=1");
@@ -389,12 +396,12 @@ export async function convertPreviewResult(formData: FormData) {
 
   const lead = await prisma.lead.create({
     data: {
-      ...data,
+      ...enrichedData,
       activities: {
         create: {
           type: LeadActivityType.CREATED,
           userId: user.id,
-          note: `Aus Vorschau uebernommen: ${data.source ?? "Datensammlung"}.`
+          note: `Aus Vorschau uebernommen: ${enrichedData.source ?? "Datensammlung"}.`
         }
       }
     }
@@ -437,7 +444,7 @@ export async function convertDirectoryResult(resultId: string) {
       country: result.country,
       phone: result.phone,
       email: result.email,
-      website: result.website,
+      website: normalizeWebsite(result.website),
       source: result.source,
       sourceUrl: result.sourceUrl,
       activities: {

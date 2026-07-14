@@ -101,7 +101,11 @@ export function findEmail(html: string) {
 
 export function findPhone(html: string) {
   const phone = html.match(/(?:\+49|0049|0)[\d\s()./-]{7,}/)?.[0];
-  return phone?.replace(/\s+/g, " ").trim() ?? null;
+  const normalized = phone?.replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+  const digits = normalized.replace(/\D/g, "");
+  if (normalized.startsWith("00") && !normalized.startsWith("0049")) return null;
+  return digits.length >= 8 ? normalized : null;
 }
 
 function getLinkTargets(html: string) {
@@ -149,11 +153,12 @@ export async function checkWebsite(website: string): Promise<WebsiteCheckResult>
 
   let main: FetchResult | null = null;
   let http: FetchResult | null = null;
+  const failedAttempts: string[] = [];
 
   try {
     main = await fetchHtml(httpsUrl);
   } catch (error) {
-    notes.push(
+    failedAttempts.push(
       `HTTPS fehlgeschlagen: ${error instanceof Error ? error.message : "unbekannter Fehler"}`
     );
   }
@@ -162,7 +167,7 @@ export async function checkWebsite(website: string): Promise<WebsiteCheckResult>
     try {
       main = await fetchHtml(normalizedUrl);
     } catch (error) {
-      notes.push(
+      failedAttempts.push(
         `Website nicht erreichbar: ${error instanceof Error ? error.message : "unbekannter Fehler"}`
       );
     }
@@ -174,6 +179,11 @@ export async function checkWebsite(website: string): Promise<WebsiteCheckResult>
     http = null;
   }
 
+  if (!main?.ok && http?.ok) {
+    main = http;
+    notes.push(`Erfolgreich ueber HTTP/Weiterleitung: ${http.url}`);
+  }
+
   const html = main?.html ?? "";
   const legalPages = html
     ? detectLegalPages(html)
@@ -181,6 +191,12 @@ export async function checkWebsite(website: string): Promise<WebsiteCheckResult>
   const finalUrl = main?.url;
   const httpsEnabled = Boolean(main?.ok && finalUrl?.startsWith("https://"));
   const httpRedirectsToHttps = Boolean(http?.url.startsWith("https://"));
+  if (finalUrl && finalUrl !== normalizedUrl) {
+    notes.push(`Weitergeleitet zu: ${finalUrl}`);
+  }
+  if (!main?.ok) {
+    notes.push(...failedAttempts);
+  }
 
   return {
     normalizedUrl,

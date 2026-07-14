@@ -4,7 +4,11 @@ import {
   getDirectoryProviderDefinition,
   searchDirectory
 } from "@/lib/directory-provider";
-import { build11880SearchUrl, parse11880SearchResults } from "@/lib/11880-search";
+import {
+  build11880SearchUrl,
+  parse11880DetailWebsite,
+  parse11880SearchResults
+} from "@/lib/11880-search";
 import { parseDirectoryCsv } from "@/lib/manual-import";
 
 describe("directory provider", () => {
@@ -159,5 +163,87 @@ describe("directory provider", () => {
     });
 
     expect(results[0].website).toBe("http://www.dachstauden.com/");
+  });
+
+  it("derives 11880 websites from email domains when no website button exists", () => {
+    const html = `<script type="application/ld+json">${JSON.stringify({
+      "@context": "http://schema.org",
+      "@type": "SearchResultsPage",
+      mainEntity: {
+        "@type": "ItemList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            item: {
+              "@type": "LocalBusiness",
+              name: "Dr.med.dent. Ulrich Thaler Zahnarzt",
+              url: "https://www.11880.com/branchenbuch/brueggen-niederrhein/111915897B41348960/dr-med-dent-ulrich-thaler-zahnarzt.html",
+              email: "info@praxis-thaler.de",
+              telephone: "(02163) 95710"
+            }
+          }
+        ]
+      }
+    })}</script>`;
+
+    const results = parse11880SearchResults({
+      html,
+      industry: "Zahnarzt",
+      country: "Deutschland",
+      limit: 10
+    });
+
+    expect(results[0].website).toBe("https://praxis-thaler.de");
+  });
+
+  it("reads 11880 websites from visible domain text", () => {
+    const html = `
+      <script type="application/ld+json">${JSON.stringify({
+        "@context": "http://schema.org",
+        "@type": "SearchResultsPage",
+        mainEntity: {
+          "@type": "ItemList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              item: {
+                "@type": "LocalBusiness",
+                name: "Dr.med.dent. Ulrich Thaler Zahnarzt",
+                url: "https://www.11880.com/branchenbuch/brueggen-niederrhein/111915897B41348960/dr-med-dent-ulrich-thaler-zahnarzt.html"
+              }
+            }
+          ]
+        }
+      })}</script>
+      <li class="result-list-entry search-result-list-item" data-name="Dr.med.dent. Ulrich Thaler Zahnarzt">
+        <a href="/branchenbuch/brueggen-niederrhein/111915897B41348960/dr-med-dent-ulrich-thaler-zahnarzt.html" class="result-list-entry-title entry-detail-link">
+          Dr.med.dent. Ulrich Thaler Zahnarzt
+        </a>
+        <span>praxis-thaler.de</span>
+      </li>
+    `;
+
+    const results = parse11880SearchResults({
+      html,
+      industry: "Zahnarzt",
+      country: "Deutschland",
+      limit: 10
+    });
+
+    expect(results[0].website).toBe("https://praxis-thaler.de");
+  });
+
+  it("reads websites from 11880 detail pages", () => {
+    const html = `
+      <a rel="noopener" href="http://www.praxis-thaler.de" target="_blank">
+        <div class="mobile-action-bar__icon icon icon-website"></div>
+        <div class="mobile-action-bar__label">Website</div>
+        <meta itemprop="url" content="http://www.praxis-thaler.de" />
+      </a>
+    `;
+
+    expect(parse11880DetailWebsite(html)).toBe("http://www.praxis-thaler.de");
   });
 });

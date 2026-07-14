@@ -1,4 +1,5 @@
 import { DirectoryCompany } from "@/lib/directory-provider";
+import { normalizeWebsite, websiteFromEmail } from "@/lib/lead-utils";
 
 function slugify11880(value: string) {
   return value
@@ -91,6 +92,67 @@ function isExternalWebsite(value: string) {
   return /^https?:\/\//i.test(value) && !is11880OwnedUrl(value);
 }
 
+function findWebsiteText(html: string) {
+  const text = decodeHtml(html.replace(/<[^>]+>/g, " "));
+  const matches = text.match(/\b(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\b/gi) ?? [];
+  const domain = matches.find((candidate) => {
+    const lower = candidate.toLowerCase();
+    const tld = lower.split(".").at(-1);
+    return (
+      !lower.startsWith("dr.") &&
+      Boolean(tld && ["de", "com", "net", "org", "info", "eu"].includes(tld)) &&
+      !is11880OwnedUrl(`https://${candidate}`)
+    );
+  });
+
+  return domain;
+}
+
+export function parse11880DetailWebsite(html: string) {
+  const anchorPattern = /<a\b[^>]*href=["']([^"']+)["'][\s\S]*?<\/a>/gi;
+  let anchorMatch = anchorPattern.exec(html);
+
+  while (anchorMatch) {
+    const anchorHtml = anchorMatch[0];
+    const href = decodeHtml(anchorMatch[1]);
+    if (
+      isExternalWebsite(href) &&
+      (/icon-website/i.test(anchorHtml) ||
+        />\s*Website\s*</i.test(anchorHtml) ||
+        /itemprop=["']url["']/i.test(anchorHtml))
+    ) {
+      return normalizeWebsite(href);
+    }
+
+    anchorMatch = anchorPattern.exec(html);
+  }
+
+  return null;
+}
+
+export async function fetch11880DetailWebsite(sourceUrl?: string | null) {
+  if (!sourceUrl) return null;
+
+  try {
+    const url = new URL(sourceUrl);
+    if (url.hostname !== "www.11880.com" || !url.pathname.includes("/branchenbuch/")) {
+      return null;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        "user-agent": "LeadScout CRM local preview"
+      },
+      next: { revalidate: 0 }
+    });
+
+    if (!response.ok) return null;
+    return parse11880DetailWebsite(await response.text());
+  } catch {
+    return null;
+  }
+}
+
 function parseSearchResultsJsonLd(html: string) {
   const scripts: string[] = [];
   const scriptPattern =
@@ -146,7 +208,7 @@ function parseHtmlResultEntries(html: string): HtmlResultEntry[] {
     entries.push({
       companyName: nameMatch ? decodeHtml(nameMatch[1]) : undefined,
       sourceUrl: normalize11880Url(detailMatch?.[1]) ?? undefined,
-      website
+      website: website ?? findWebsiteText(entryHtml)
     });
 
     entryMatch = entryPattern.exec(html);
@@ -178,6 +240,10 @@ export function parse11880SearchResults(input: {
       const item = listItem.item;
       if (!item?.name) return null;
       const sourceUrl = normalize11880Url(item.url);
+      const website =
+        (sourceUrl ? websiteBySourceUrl.get(sourceUrl) : undefined) ??
+        websiteByCompanyName.get(normalizeText(item.name)) ??
+        websiteFromEmail(item.email);
 
       return {
         externalId: sourceUrl ?? item.url,
@@ -192,9 +258,7 @@ export function parse11880SearchResults(input: {
         country: input.country,
         phone: item.telephone,
         email: item.email,
-        website:
-          (sourceUrl ? websiteBySourceUrl.get(sourceUrl) : undefined) ??
-          websiteByCompanyName.get(normalizeText(item.name))
+        website: normalizeWebsite(website)
       };
     })
     .filter(Boolean)

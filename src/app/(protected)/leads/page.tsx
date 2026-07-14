@@ -2,7 +2,7 @@ import { BlocklistType, LeadStatus, Prisma } from "@prisma/client";
 import Link from "next/link";
 import { createLead } from "@/app/(protected)/leads/actions";
 import { PageHeader } from "@/components/page-header";
-import { leadStatusLabels, leadStatusOptions } from "@/lib/lead-utils";
+import { leadStatusLabels, leadStatusOptions, normalizeWebsite } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
 
 type LeadsPageProps = {
@@ -262,7 +262,20 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                     <p>{lead.email || "Keine E-Mail"}</p>
                     <p>{lead.phone || "Keine Telefonnummer"}</p>
                   </td>
-                  <td className="px-5 py-4 text-muted">{lead.website || "Keine Website"}</td>
+                  <td className="px-5 py-4 text-muted">
+                    {lead.website ? (
+                      <a
+                        className="font-semibold text-brand hover:underline"
+                        href={normalizeWebsite(lead.website) ?? lead.website}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {lead.website}
+                      </a>
+                    ) : (
+                      "Keine Website"
+                    )}
+                  </td>
                   <td className="px-5 py-4 font-semibold text-ink">{lead.leadScore}</td>
                   <td className="px-5 py-4 text-muted">
                     <p className="font-semibold text-ink">{lead.contactCount}</p>

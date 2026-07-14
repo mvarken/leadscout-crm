@@ -60,6 +60,20 @@ export function normalizeEmail(value: string | null | undefined) {
   return text || null;
 }
 
+export function normalizeWebsite(value: string | null | undefined) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  if (/^https?:\/\//i.test(text)) return text;
+  return `https://${text.replace(/^\/+/, "")}`;
+}
+
+export function websiteFromEmail(value: string | null | undefined) {
+  const email = normalizeEmail(value);
+  const domain = email?.split("@")[1]?.trim();
+  if (!domain || !domain.includes(".")) return null;
+  return normalizeWebsite(domain);
+}
+
 export function getDuplicateReason(input: {
   domain?: string | null;
   email?: string | null;

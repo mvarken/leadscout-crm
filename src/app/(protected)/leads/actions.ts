@@ -19,7 +19,8 @@ import {
   getDuplicateReason,
   normalizeDomain,
   normalizeEmail,
-  normalizePhone
+  normalizePhone,
+  normalizeWebsite
 } from "@/lib/lead-utils";
 import { calculateLeadScore } from "@/lib/lead-score";
 import { prisma } from "@/lib/prisma";
@@ -55,7 +56,7 @@ function leadDataFromForm(formData: FormData) {
     country: cleanOptional(formData.get("country")) ?? "Deutschland",
     phone: cleanOptional(formData.get("phone")),
     email: normalizeEmail(cleanOptional(formData.get("email"))),
-    website: cleanOptional(formData.get("website")),
+    website: normalizeWebsite(cleanOptional(formData.get("website"))),
     source: cleanOptional(formData.get("source")),
     sourceUrl: cleanOptional(formData.get("sourceUrl")),
     notes: cleanOptional(formData.get("notes"))
@@ -287,6 +288,7 @@ export async function runWebsiteCheck(leadId: string) {
   const updatedLead = await prisma.lead.update({
     where: { id: leadId },
     data: {
+      website: result.finalUrl ?? result.normalizedUrl,
       websiteReachable: result.websiteReachable,
       httpsEnabled: result.httpsEnabled,
       httpRedirectsToHttps: result.httpRedirectsToHttps,
@@ -297,6 +299,7 @@ export async function runWebsiteCheck(leadId: string) {
       websiteEmail: result.websiteEmail,
       websitePhone: result.websitePhone,
       websiteCheckNotes: [
+        `Gepruefte Website: ${result.normalizedUrl}`,
         result.finalUrl ? `Finale URL: ${result.finalUrl}` : null,
         ...result.notes
       ]

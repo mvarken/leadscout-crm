@@ -3,7 +3,9 @@ import {
   companyNameLooksSimilar,
   normalizeDomain,
   normalizeEmail,
-  normalizePhone
+  normalizePhone,
+  normalizeWebsite,
+  websiteFromEmail
 } from "@/lib/lead-utils";
 
 describe("lead utilities", () => {
@@ -16,6 +18,12 @@ describe("lead utilities", () => {
   it("normalizes email and phone values", () => {
     expect(normalizeEmail(" INFO@EXAMPLE.DE ")).toBe("info@example.de");
     expect(normalizePhone("+49 (0) 221 123 456")).toBe("+490221123456");
+  });
+
+  it("normalizes website values and derives them from emails", () => {
+    expect(normalizeWebsite("praxis-thaler.de")).toBe("https://praxis-thaler.de");
+    expect(normalizeWebsite("http://example.de")).toBe("http://example.de");
+    expect(websiteFromEmail("info@praxis-thaler.de")).toBe("https://praxis-thaler.de");
   });
 
   it("detects similar company names for duplicate checks", () => {
