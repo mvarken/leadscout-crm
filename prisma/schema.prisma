@@ -12,6 +12,29 @@ enum Role {
   USER
 }
 
+enum LeadStatus {
+  NEW
+  TO_REVIEW
+  CONTACT_MISSING
+  READY_TO_CONTACT
+  CONTACTED
+  REPLIED
+  INTERESTED
+  OFFER_SENT
+  FOLLOW_UP
+  CUSTOMER
+  NOT_INTERESTED
+  DO_NOT_CONTACT
+  INVALID
+}
+
+enum LeadActivityType {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  NOTE_ADDED
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
@@ -23,6 +46,7 @@ model User {
   updatedAt    DateTime  @updatedAt
   lastLoginAt  DateTime?
   sessions     Session[]
+  leadActivities LeadActivity[]
 
   @@index([active])
   @@index([role])
@@ -38,4 +62,51 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Lead {
+  id           String         @id @default(cuid())
+  companyName  String
+  contactName  String?
+  industry     String?
+  street       String?
+  postalCode   String?
+  city         String?
+  state        String?
+  country      String         @default("Deutschland")
+  phone        String?
+  email        String?
+  website      String?
+  source       String?
+  sourceUrl    String?
+  status       LeadStatus     @default(NEW)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  activities   LeadActivity[]
+
+  @@index([companyName])
+  @@index([city])
+  @@index([status])
+  @@index([email])
+  @@index([phone])
+  @@index([website])
+}
+
+model LeadActivity {
+  id        String           @id @default(cuid())
+  leadId    String
+  lead      Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      LeadActivityType
+  oldValue  String?
+  newValue  String?
+  note      String?
+  createdAt DateTime         @default(now())
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
 }

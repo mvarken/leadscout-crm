@@ -32,12 +32,23 @@ Offen fuer lokalen Abschluss:
 
 ## Phase 2: Leadverwaltung
 
+Status: umgesetzt als erster manueller CRM-Ausbau
+
 - Lead-Datenmodell
 - Leads anlegen und bearbeiten
 - Statuswerte
 - Historie fuer Statusaenderungen und Notizen
 - Suche und Filter
 - Duplikatpruefung nach Domain, E-Mail, Telefon und aehnlichem Namen am selben Ort
+
+Abschlusskriterien:
+
+- Leads koennen manuell angelegt werden
+- Lead-Detailseiten sind erreichbar
+- Stammdaten koennen bearbeitet werden
+- Statuswechsel erzeugen Historieneintraege
+- Notizen werden chronologisch in der Historie gespeichert
+- Dashboard-Karten nutzen echte Lead-Zahlen
 
 ## Phase 3: Websitepruefung
 

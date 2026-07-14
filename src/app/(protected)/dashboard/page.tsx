@@ -1,18 +1,27 @@
+import { LeadStatus } from "@prisma/client";
 import { PageHeader } from "@/components/page-header";
+import { prisma } from "@/lib/prisma";
 
-const cards = [
-  { label: "Neue Leads", value: "0" },
-  { label: "Angeschriebene Leads", value: "0" },
-  { label: "Interessierte Leads", value: "0" },
-  { label: "Offene Wiedervorlagen", value: "0" }
-];
+export default async function DashboardPage() {
+  const [newLeads, contactedLeads, interestedLeads, openFollowUps] = await Promise.all([
+    prisma.lead.count({ where: { status: LeadStatus.NEW } }),
+    prisma.lead.count({ where: { status: LeadStatus.CONTACTED } }),
+    prisma.lead.count({ where: { status: LeadStatus.INTERESTED } }),
+    prisma.lead.count({ where: { status: LeadStatus.FOLLOW_UP } })
+  ]);
 
-export default function DashboardPage() {
+  const cards = [
+    { label: "Neue Leads", value: newLeads },
+    { label: "Angeschriebene Leads", value: contactedLeads },
+    { label: "Interessierte Leads", value: interestedLeads },
+    { label: "Offene Wiedervorlagen", value: openFollowUps }
+  ];
+
   return (
     <>
       <PageHeader
         title="Dashboard"
-        description="Die Kennzahlen sind fuer Phase 1 statisch vorbereitet und werden spaeter mit echten Lead-Daten verbunden."
+        description="Aktuelle Kennzahlen aus der Leadverwaltung. Automatisierte Datensammlung und Websitepruefung folgen spaeter."
       />
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
