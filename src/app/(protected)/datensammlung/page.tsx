@@ -560,7 +560,7 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
           </div>
         ) : null}
         {search11880PreviewResult?.companies.length ? (
-          <div className="mt-4 overflow-x-auto rounded-lg border border-line">
+          <div className="mt-4 max-w-full overflow-x-auto rounded-lg border border-line">
             <table className="w-full min-w-[900px] border-collapse bg-white text-left text-sm">
               <thead className="bg-field text-xs uppercase text-muted">
                 <tr>
@@ -742,7 +742,7 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
         </p>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[300px_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
         <aside className="rounded-lg border border-line bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-ink">Suchauftraege</h2>
           <div className="space-y-2">
@@ -782,7 +782,7 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
             ) : null}
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="max-w-full overflow-x-auto">
             <table className="w-full min-w-[980px] border-collapse text-left text-sm">
               <thead className="bg-field text-xs uppercase text-muted">
                 <tr>

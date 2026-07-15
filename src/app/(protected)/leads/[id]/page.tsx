@@ -71,7 +71,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
         },
         activities: {
           orderBy: { createdAt: "desc" },
-          take: 11,
+          take: 6,
           include: {
             user: {
               select: {
@@ -111,8 +111,8 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
     where: { active: true },
     orderBy: { name: "asc" }
   });
-  const historyItems = lead.activities.slice(0, 10).map(formatLeadHistoryItem);
-  const hasMoreHistory = lead.activities.length > 10;
+  const historyItems = lead.activities.slice(0, 5).map(formatLeadHistoryItem);
+  const hasMoreHistory = lead.activities.length > 5;
 
   return (
     <>
@@ -146,7 +146,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">

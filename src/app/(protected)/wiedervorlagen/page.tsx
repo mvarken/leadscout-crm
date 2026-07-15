@@ -63,7 +63,7 @@ export default async function WiedervorlagenPage() {
       </section>
 
       <section className="rounded-lg border border-line bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="max-w-full overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-left text-sm">
             <thead className="bg-field text-xs uppercase text-muted">
               <tr>

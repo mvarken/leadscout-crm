@@ -69,7 +69,7 @@ export default async function EinstellungenPage() {
         <div className="border-b border-line p-5">
           <h2 className="text-lg font-semibold text-ink">Aktive Ausschluesse</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="max-w-full overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse text-left text-sm">
             <thead className="bg-field text-xs uppercase text-muted">
               <tr>

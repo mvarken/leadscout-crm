@@ -82,7 +82,7 @@ export default async function KommunikationPage() {
         </form>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section className="rounded-lg border border-line bg-white shadow-sm">
           <div className="border-b border-line p-5">
             <h2 className="text-lg font-semibold text-ink">Aktive Vorlagen</h2>

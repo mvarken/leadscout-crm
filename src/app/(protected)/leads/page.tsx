@@ -288,7 +288,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           </form>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="max-w-full overflow-x-auto">
           <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
             <thead className="bg-field text-xs uppercase text-muted">
               <tr>
