@@ -157,13 +157,13 @@ export async function updateLead(leadId: string, formData: FormData) {
   const blocklistMatch = await findBlocklistMatch(data);
 
   if (blocklistMatch) {
-    redirect(`/leads/${leadId}?blocked=${blocklistMatch.id}`);
+    redirect(`/leads/${leadId}?edit=1&blocked=${blocklistMatch.id}`);
   }
 
   const duplicate = await findDuplicateLead({ ...data, excludeId: leadId });
 
   if (duplicate) {
-    redirect(`/leads/${leadId}?duplicate=${duplicate.lead.id}`);
+    redirect(`/leads/${leadId}?edit=1&duplicate=${duplicate.lead.id}`);
   }
 
   await prisma.lead.update({
