@@ -72,6 +72,16 @@ const previewLeadSchema = z.object({
   sourceUrl: z.string().trim().max(300).nullable()
 });
 
+function safeDatensammlungReturnUrl(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text.startsWith("/datensammlung") ? text : "/datensammlung";
+}
+
+function appendSearchParam(url: string, key: string, value: string) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+}
+
 function reviewedAt(checked: boolean, currentValue?: Date | null) {
   if (!checked) return null;
   return currentValue ?? new Date();
@@ -382,6 +392,7 @@ export async function importDirectoryCsv(formData: FormData) {
 
 export async function convertPreviewResult(formData: FormData) {
   const user = await requireUser();
+  const returnTo = safeDatensammlungReturnUrl(formData.get("returnTo"));
   const data = previewLeadDataFromForm(formData);
   const detailWebsite = await fetch11880DetailWebsite(data.sourceUrl);
   const enrichedData = {
@@ -391,7 +402,7 @@ export async function convertPreviewResult(formData: FormData) {
   const duplicateReason = await findDuplicate(enrichedData);
 
   if (duplicateReason) {
-    redirect("/datensammlung?previewDuplicate=1");
+    redirect(appendSearchParam(returnTo, "previewDuplicate", duplicateReason));
   }
 
   const lead = await prisma.lead.create({

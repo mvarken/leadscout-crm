@@ -1,7 +1,8 @@
 import {
   CollectionJobStatus,
   DirectoryProviderStatus,
-  DirectoryResultStatus
+  DirectoryResultStatus,
+  Prisma
 } from "@prisma/client";
 import Link from "next/link";
 import {
@@ -17,6 +18,15 @@ import {
   ensureDefaultDirectoryProviders,
   getDirectoryProviderDefinition
 } from "@/lib/directory-provider";
+import type { DirectoryCompany } from "@/lib/directory-provider";
+import {
+  companyNameLooksSimilar,
+  getDuplicateReason,
+  normalizeDomain,
+  normalizeEmail,
+  normalizePhone,
+  normalizeWebsite
+} from "@/lib/lead-utils";
 import { search11880Preview } from "@/lib/11880-search";
 import { prisma } from "@/lib/prisma";
 
@@ -25,6 +35,7 @@ type DatensammlungPageProps = {
     job?: string;
     q11880?: string;
     loc11880?: string;
+    previewDuplicate?: string;
   };
 };
 
@@ -51,6 +62,80 @@ const providerStatusLabels: Record<DirectoryProviderStatus, string> = {
 
 function reviewedLabel(value: Date | null) {
   return value ? value.toLocaleDateString("de-DE") : "Offen";
+}
+
+function datensammlungReturnUrl(input: { q11880?: string; loc11880?: string }) {
+  const params = new URLSearchParams();
+  if (input.q11880) params.set("q11880", input.q11880);
+  if (input.loc11880) params.set("loc11880", input.loc11880);
+  const query = params.toString();
+  return query ? `/datensammlung?${query}` : "/datensammlung";
+}
+
+async function getPreviewDuplicateHints(companies: DirectoryCompany[]) {
+  if (companies.length === 0) return new Map<string, { reason: string; leadId?: string }>();
+
+  const domains = companies.map((company) => normalizeDomain(company.website)).filter(Boolean);
+  const emails = companies.map((company) => normalizeEmail(company.email)).filter(Boolean);
+  const phones = companies.map((company) => normalizePhone(company.phone)).filter(Boolean);
+  const cities = companies.map((company) => company.city).filter(Boolean);
+  const duplicateFilters = [
+    ...emails.map((email) => ({ email })),
+    ...phones.map((phone) => ({ phone: { contains: phone } })),
+    ...domains.map((domain) => ({ website: { contains: domain, mode: "insensitive" } })),
+    ...cities.map((city) => ({ city: { equals: city, mode: "insensitive" } }))
+  ].filter(Boolean) as Prisma.LeadWhereInput[];
+
+  if (duplicateFilters.length === 0) {
+    return new Map<string, { reason: string; leadId?: string }>();
+  }
+
+  const candidates = await prisma.lead.findMany({
+    where: {
+      OR: duplicateFilters
+    },
+    select: {
+      id: true,
+      companyName: true,
+      city: true,
+      email: true,
+      phone: true,
+      website: true
+    },
+    take: 100
+  });
+
+  const hints = new Map<string, { reason: string; leadId?: string }>();
+
+  for (const company of companies) {
+    const key = company.sourceUrl ?? company.companyName;
+    const domain = normalizeDomain(company.website);
+    const email = normalizeEmail(company.email);
+    const phone = normalizePhone(company.phone);
+
+    for (const candidate of candidates) {
+      const candidateDomain = normalizeDomain(candidate.website);
+      const reason =
+        domain && candidateDomain === domain
+          ? getDuplicateReason({ domain })
+          : email && normalizeEmail(candidate.email) === email
+            ? getDuplicateReason({ email })
+            : phone && normalizePhone(candidate.phone) === phone
+              ? getDuplicateReason({ phone })
+              : company.city &&
+                  candidate.city?.toLowerCase() === company.city.toLowerCase() &&
+                  companyNameLooksSimilar(company.companyName, candidate.companyName)
+                ? getDuplicateReason({ similarName: candidate.companyName })
+                : null;
+
+      if (reason) {
+        hints.set(key, { reason, leadId: candidate.id });
+        break;
+      }
+    }
+  }
+
+  return hints;
 }
 
 export default async function DatensammlungPage({ searchParams }: DatensammlungPageProps) {
@@ -99,6 +184,13 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
       orderBy: [{ status: "asc" }, { name: "asc" }]
     })
   ]);
+  const previewDuplicateHints = await getPreviewDuplicateHints(
+    search11880PreviewResult?.companies ?? []
+  );
+  const returnTo = datensammlungReturnUrl({
+    q11880: search11880Industry,
+    loc11880: search11880Location
+  });
 
   const sortedProviders = [...providers].sort((first, second) => {
     const firstReady =
@@ -149,6 +241,13 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
         title="Datensammlung"
         description="Suchauftraege starten, Ergebnisse pruefen und passende Eintraege als Leads uebernehmen."
       />
+
+      {searchParams.previewDuplicate ? (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-semibold">Treffer wurde nicht uebernommen.</p>
+          <p className="mt-1">{searchParams.previewDuplicate}</p>
+        </div>
+      ) : null}
 
       <section className="mb-6 grid gap-4 lg:grid-cols-2">
         {sortedProviders.map((provider) => {
@@ -472,72 +571,108 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
                 </tr>
               </thead>
               <tbody>
-                {search11880PreviewResult.companies.map((company) => (
-                  <tr
-                    className="border-t border-line"
-                    key={company.sourceUrl ?? company.companyName}
-                  >
-                    <td className="px-5 py-4">
-                      <p className="font-semibold text-ink">{company.companyName}</p>
-                      {company.sourceUrl ? (
-                        <a
-                          className="mt-1 inline-block text-xs font-semibold text-brand hover:underline"
-                          href={company.sourceUrl}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          11880-Eintrag
-                        </a>
-                      ) : null}
-                    </td>
-                    <td className="px-5 py-4 text-muted">
-                      <p>{company.street || "-"}</p>
-                      <p>{[company.postalCode, company.city].filter(Boolean).join(" ") || "-"}</p>
-                    </td>
-                    <td className="px-5 py-4 text-muted">
-                      <p>{company.email || "Keine E-Mail"}</p>
-                      <p>{company.phone || "Keine Telefonnummer"}</p>
-                      {company.website ? (
-                        <a
-                          className="mt-1 inline-block font-semibold text-brand hover:underline"
-                          href={company.website}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          {company.website}
-                        </a>
-                      ) : (
-                        <p>Keine Website</p>
-                      )}
-                    </td>
-                    <td className="px-5 py-4">
-                      <form action={convertPreviewResult}>
-                        {Object.entries({
-                          companyName: company.companyName,
-                          industry: company.industry,
-                          street: company.street,
-                          postalCode: company.postalCode,
-                          city: company.city,
-                          state: company.state,
-                          country: company.country,
-                          phone: company.phone,
-                          email: company.email,
-                          website: company.website,
-                          source: company.source,
-                          sourceUrl: company.sourceUrl
-                        }).map(([name, value]) => (
-                          <input key={name} name={name} type="hidden" value={value ?? ""} />
-                        ))}
-                        <button
-                          className="rounded-md bg-brand px-3 py-2 font-semibold text-white"
-                          type="submit"
-                        >
-                          +
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
-                ))}
+                {search11880PreviewResult.companies.map((company) => {
+                  const duplicateHint = previewDuplicateHints.get(
+                    company.sourceUrl ?? company.companyName
+                  );
+                  const normalizedWebsite = normalizeWebsite(company.website);
+
+                  return (
+                    <tr
+                      className="border-t border-line"
+                      key={company.sourceUrl ?? company.companyName}
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-ink">{company.companyName}</p>
+                          {duplicateHint ? (
+                            <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900">
+                              Bereits vorhanden
+                            </span>
+                          ) : (
+                            <span className="rounded-md bg-teal-50 px-2 py-1 text-xs font-semibold text-brand">
+                              Neu
+                            </span>
+                          )}
+                        </div>
+                        {company.sourceUrl ? (
+                          <a
+                            className="mt-1 inline-block text-xs font-semibold text-brand hover:underline"
+                            href={company.sourceUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            11880-Eintrag
+                          </a>
+                        ) : null}
+                        {duplicateHint ? (
+                          <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-900">
+                            {duplicateHint.reason}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-5 py-4 text-muted">
+                        <p>{company.street || "-"}</p>
+                        <p>{[company.postalCode, company.city].filter(Boolean).join(" ") || "-"}</p>
+                      </td>
+                      <td className="px-5 py-4 text-muted">
+                        <p>{company.email || "Keine E-Mail"}</p>
+                        <p>{company.phone || "Keine Telefonnummer"}</p>
+                        {normalizedWebsite ? (
+                          <a
+                            className="mt-1 inline-block break-all font-semibold text-brand hover:underline"
+                            href={normalizedWebsite}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {normalizedWebsite}
+                          </a>
+                        ) : (
+                          <p>Keine Website</p>
+                        )}
+                      </td>
+                      <td className="px-5 py-4">
+                        {duplicateHint?.leadId ? (
+                          <Link
+                            className="font-semibold text-brand hover:underline"
+                            href={`/leads/${duplicateHint.leadId}`}
+                          >
+                            Lead oeffnen
+                          </Link>
+                        ) : duplicateHint ? (
+                          <span className="text-sm font-semibold text-muted">Blockiert</span>
+                        ) : (
+                          <form action={convertPreviewResult}>
+                            <input name="returnTo" type="hidden" value={returnTo} />
+                            {Object.entries({
+                              companyName: company.companyName,
+                              industry: company.industry,
+                              street: company.street,
+                              postalCode: company.postalCode,
+                              city: company.city,
+                              state: company.state,
+                              country: company.country,
+                              phone: company.phone,
+                              email: company.email,
+                              website: normalizedWebsite,
+                              source: company.source,
+                              sourceUrl: company.sourceUrl
+                            }).map(([name, value]) => (
+                              <input key={name} name={name} type="hidden" value={value ?? ""} />
+                            ))}
+                            <button
+                              className="rounded-md bg-brand px-3 py-2 font-semibold text-white"
+                              title="Als Lead uebernehmen und 11880-Detailseite pruefen"
+                              type="submit"
+                            >
+                              +
+                            </button>
+                          </form>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -682,7 +817,20 @@ export default async function DatensammlungPage({ searchParams }: DatensammlungP
                         <p>{result.email || "Keine E-Mail"}</p>
                         <p>{result.phone || "Keine Telefonnummer"}</p>
                       </td>
-                      <td className="px-5 py-4 text-muted">{result.website || "Keine Website"}</td>
+                      <td className="px-5 py-4 text-muted">
+                        {normalizeWebsite(result.website) ? (
+                          <a
+                            className="break-all font-semibold text-brand hover:underline"
+                            href={normalizeWebsite(result.website) ?? undefined}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {normalizeWebsite(result.website)}
+                          </a>
+                        ) : (
+                          "Keine Website"
+                        )}
+                      </td>
                       <td className="px-5 py-4">{resultStatusLabels[result.status]}</td>
                       <td className="px-5 py-4">
                         {result.lead ? (
