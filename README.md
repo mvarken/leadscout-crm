@@ -1,8 +1,6 @@
 # LeadScout CRM
 
-LeadScout CRM ist ein produktionsnah strukturiertes Grundsystem fuer ein spaeteres CRM zur Datensammlung, Websitepruefung und Leadverwaltung. Dieser Stand enthaelt ausschliesslich Phase 1: Projektbasis, Datenbank, Login, Rollen, geschuetztes Admin-Layout und Platzhalterseiten.
-
-Noch nicht enthalten: Lead-Datenbank, Scraper, 11880-Anbindung, Websiteanalyse oder automatische Kommunikation.
+LeadScout CRM ist ein produktionsnah strukturiertes CRM fuer Datensammlung, Websitepruefung, Leadverwaltung, Wiedervorlagen und Kommunikation.
 
 ## Voraussetzungen
 
@@ -33,6 +31,19 @@ Passe anschliessend mindestens diese Werte an:
 - `ADMIN_PASSWORD`
 
 Speichere keine echten Secrets im Repository. Die Datei `.env` ist bewusst ignoriert.
+
+Optional fuer echten E-Mail-Versand per SMTP:
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASSWORD`
+- `SMTP_FROM`
+- `SMTP_FROM_NAME`
+- `SMTP_REPLY_TO`
+
+Ohne SMTP-Daten koennen Kontakte weiterhin protokolliert und Vorlagen gepflegt werden, der direkte E-Mail-Versand bleibt dann deaktiviert.
 
 ## Docker-Start
 
@@ -89,6 +100,18 @@ npm run lint
 npm run test
 npm run format
 ```
+
+## Kommunikation und SMTP
+
+Im Bereich `Kommunikation` koennen E-Mail-Vorlagen angelegt werden. Die Standardvorlage nutzt Platzhalter:
+
+- `{{firma}}`
+- `{{ansprechpartner}}`
+- `{{stadt}}`
+- `{{website}}`
+- `{{email}}`
+
+Beim Lead kann im Kontaktformular eine Vorlage ausgewaehlt werden. Bleiben Betreff oder Nachricht leer, werden sie aus der Vorlage und den Lead-Stammdaten erzeugt. Wenn SMTP eingerichtet ist und `E-Mail jetzt senden` aktiviert wird, versendet die App die E-Mail und speichert den Kontakt anschliessend im Verlauf.
 
 ## Sicherheitsnotizen
 

@@ -13,6 +13,7 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { contactChannelLabels, contactDirectionLabels } from "@/lib/communication";
 import { leadStatusLabels, leadStatusOptions, normalizeWebsite } from "@/lib/lead-utils";
+import { getSmtpStatus } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 
 type LeadDetailPageProps = {
@@ -113,6 +114,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
   const recalculateLeadScoreWithId = recalculateLeadScore.bind(null, lead.id);
   const createReminderWithId = createReminder.bind(null, lead.id);
   const logLeadContactWithId = logLeadContact.bind(null, lead.id);
+  const smtpStatus = getSmtpStatus();
   const emailTemplates = await prisma.emailTemplate.findMany({
     where: { active: true },
     orderBy: { name: "asc" }
@@ -552,8 +554,21 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
                 <textarea
                   className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
                   name="message"
-                  required
+                  placeholder="Leer lassen, wenn eine Vorlage ausgewaehlt ist."
                 />
+              </label>
+              <label className="flex items-start gap-3 rounded-md border border-line bg-field p-3 text-sm">
+                <input className="mt-1" name="sendEmail" type="checkbox" value="on" />
+                <span>
+                  <span className="font-semibold text-ink">E-Mail jetzt senden</span>
+                  <span className="mt-1 block text-muted">
+                    {smtpStatus.configured
+                      ? lead.email
+                        ? `Versand an ${lead.email}`
+                        : "Nicht moeglich, weil keine E-Mail-Adresse beim Lead hinterlegt ist."
+                      : "SMTP ist noch nicht vollstaendig eingerichtet."}
+                  </span>
+                </span>
               </label>
               <button
                 className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"

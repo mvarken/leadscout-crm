@@ -1,13 +1,20 @@
 import Link from "next/link";
 import {
+  createDefaultEmailTemplate,
   createEmailTemplate,
   deactivateEmailTemplate
 } from "@/app/(protected)/kommunikation/actions";
 import { PageHeader } from "@/components/page-header";
-import { contactChannelLabels, contactDirectionLabels } from "@/lib/communication";
+import {
+  contactChannelLabels,
+  contactDirectionLabels,
+  defaultFirstContactTemplate
+} from "@/lib/communication";
+import { getSmtpStatus } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 
 export default async function KommunikationPage() {
+  const smtpStatus = getSmtpStatus();
   const [templates, contactLogs] = await Promise.all([
     prisma.emailTemplate.findMany({
       where: { active: true },
@@ -42,7 +49,39 @@ export default async function KommunikationPage() {
       />
 
       <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-ink">Neue E-Mail-Vorlage</h2>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">SMTP-Versand</h2>
+            <p className="mt-1 text-sm text-muted">
+              {smtpStatus.configured
+                ? "SMTP ist eingerichtet. Ausgehende E-Mails koennen direkt beim Lead versendet werden."
+                : `SMTP ist noch nicht vollstaendig eingerichtet: ${smtpStatus.missing.join(", ")}.`}
+            </p>
+          </div>
+          <span
+            className={`w-fit rounded-md px-3 py-2 text-sm font-semibold ${
+              smtpStatus.configured
+                ? "bg-emerald-50 text-emerald-800"
+                : "bg-amber-50 text-amber-900"
+            }`}
+          >
+            {smtpStatus.configured ? "Bereit" : "Einrichtung offen"}
+          </span>
+        </div>
+      </section>
+
+      <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold text-ink">Neue E-Mail-Vorlage</h2>
+          <form action={createDefaultEmailTemplate}>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink hover:bg-field"
+              type="submit"
+            >
+              Standardvorlage anlegen
+            </button>
+          </form>
+        </div>
         <form action={createEmailTemplate} className="grid gap-4 lg:grid-cols-2">
           <label className="block">
             <span className="text-sm font-medium text-ink">Name</span>
@@ -50,6 +89,7 @@ export default async function KommunikationPage() {
               className="mt-1 w-full rounded-md border border-line px-3 py-2"
               name="name"
               placeholder="Erstkontakt WordPress"
+              defaultValue={defaultFirstContactTemplate.name}
               required
             />
           </label>
@@ -59,6 +99,7 @@ export default async function KommunikationPage() {
               className="mt-1 w-full rounded-md border border-line px-3 py-2"
               name="subject"
               placeholder="Kurzer Hinweis zu Ihrer Website"
+              defaultValue={defaultFirstContactTemplate.subject}
               required
             />
           </label>
@@ -68,6 +109,7 @@ export default async function KommunikationPage() {
               className="mt-1 min-h-40 w-full rounded-md border border-line px-3 py-2"
               name="body"
               placeholder="Hallo {{firma}}, ..."
+              defaultValue={defaultFirstContactTemplate.body}
               required
             />
           </label>
