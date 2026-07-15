@@ -101,6 +101,7 @@ export async function updateSmtpSettings(formData: FormData) {
   revalidatePath("/einstellungen");
   revalidatePath("/kommunikation");
   setFlash("success", "SMTP-Einstellungen gespeichert.");
+  redirect("/einstellungen");
 }
 
 export async function sendSmtpTest(formData: FormData) {
