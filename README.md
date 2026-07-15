@@ -32,8 +32,6 @@ Passe anschliessend mindestens diese Werte an:
 
 Speichere keine echten Secrets im Repository. Die Datei `.env` ist bewusst ignoriert.
 
-SMTP wird in der App unter `Einstellungen` gepflegt. Ohne SMTP-Daten koennen Kontakte weiterhin protokolliert und Vorlagen gepflegt werden, der direkte E-Mail-Versand bleibt dann deaktiviert.
-
 ## Docker-Start
 
 PostgreSQL lokal starten:
@@ -90,9 +88,9 @@ npm run test
 npm run format
 ```
 
-## Kommunikation und SMTP
+## Kommunikation
 
-Im Bereich `Kommunikation` koennen E-Mail-Vorlagen angelegt werden. Die Standardvorlage nutzt Platzhalter:
+Im Bereich `Kommunikation` koennen E-Mail-Vorlagen fuer Copy-Paste angelegt werden. Vorlagen nutzen Platzhalter:
 
 - `{{firma}}`
 - `{{ansprechpartner}}`
@@ -100,18 +98,7 @@ Im Bereich `Kommunikation` koennen E-Mail-Vorlagen angelegt werden. Die Standard
 - `{{website}}`
 - `{{email}}`
 
-Beim Lead kann im Kontaktformular eine Vorlage ausgewaehlt werden. Bleiben Betreff oder Nachricht leer, werden sie aus der Vorlage und den Lead-Stammdaten erzeugt. Wenn SMTP eingerichtet ist und `E-Mail jetzt senden` aktiviert wird, versendet die App die E-Mail und speichert den Kontakt anschliessend im Verlauf.
-
-SMTP-Daten werden unter `Einstellungen` gespeichert:
-
-- SMTP-Server
-- Port
-- SSL/TLS
-- Benutzer
-- Passwort
-- Absender E-Mail
-- Absender Name
-- Antwortadresse
+Beim Lead kann im Kontaktformular eine Vorlage ausgewaehlt werden. Bleiben Betreff oder Nachricht leer, werden sie aus der Vorlage und den Lead-Stammdaten erzeugt. Der fertige Text kann kopiert und extern versendet werden; der Kontakt wird anschliessend im Verlauf protokolliert.
 
 ## Sicherheitsnotizen
 

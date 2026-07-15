@@ -21,6 +21,39 @@ export const leadStatusOptions = Object.entries(leadStatusLabels).map(([value, l
   label
 }));
 
+export const leadStatusGroups = [
+  {
+    label: "Vorbereitung",
+    options: [
+      LeadStatus.NEW,
+      LeadStatus.TO_REVIEW,
+      LeadStatus.CONTACT_MISSING,
+      LeadStatus.READY_TO_CONTACT
+    ]
+  },
+  {
+    label: "Kontakt",
+    options: [
+      LeadStatus.CONTACTED,
+      LeadStatus.REPLIED,
+      LeadStatus.INTERESTED,
+      LeadStatus.OFFER_SENT,
+      LeadStatus.FOLLOW_UP
+    ]
+  },
+  {
+    label: "Abschluss",
+    options: [LeadStatus.CUSTOMER, LeadStatus.NOT_INTERESTED]
+  },
+  {
+    label: "Sperren",
+    options: [LeadStatus.DO_NOT_CONTACT, LeadStatus.INVALID]
+  }
+].map((group) => ({
+  label: group.label,
+  options: group.options.map((value) => ({ value, label: leadStatusLabels[value] }))
+}));
+
 export function cleanOptional(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
   return text.length > 0 ? text : null;

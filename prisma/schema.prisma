@@ -254,21 +254,6 @@ model BlocklistEntry {
   @@index([type])
 }
 
-model SmtpSettings {
-  id        String   @id @default("default")
-  enabled   Boolean  @default(false)
-  host      String?
-  port      Int      @default(587)
-  secure    Boolean  @default(false)
-  user      String?
-  password  String?
-  fromEmail String?
-  fromName  String?
-  replyTo   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model DirectoryProviderConfig {
   id                     String                  @id @default(cuid())
   key                    String                  @unique

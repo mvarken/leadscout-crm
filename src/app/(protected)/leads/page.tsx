@@ -2,7 +2,12 @@ import { BlocklistType, LeadStatus, Prisma } from "@prisma/client";
 import Link from "next/link";
 import { createLead } from "@/app/(protected)/leads/actions";
 import { PageHeader } from "@/components/page-header";
-import { leadStatusLabels, leadStatusOptions, normalizeWebsite } from "@/lib/lead-utils";
+import {
+  leadStatusGroups,
+  leadStatusLabels,
+  leadStatusOptions,
+  normalizeWebsite
+} from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
 
 type LeadsPageProps = {
@@ -11,6 +16,7 @@ type LeadsPageProps = {
     status?: string;
     duplicate?: string;
     blocked?: string;
+    add?: string;
   };
 };
 
@@ -26,9 +32,27 @@ function statusFromSearch(value?: string) {
   return Object.values(LeadStatus).includes(value as LeadStatus) ? (value as LeadStatus) : null;
 }
 
+function leadsHref(
+  searchParams: LeadsPageProps["searchParams"],
+  overrides: Record<string, string | null>
+) {
+  const params = new URLSearchParams();
+  if (searchParams.q) params.set("q", searchParams.q);
+  if (searchParams.status) params.set("status", searchParams.status);
+
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value) params.set(key, value);
+    else params.delete(key);
+  }
+
+  const query = params.toString();
+  return query ? `/leads?${query}` : "/leads";
+}
+
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const query = searchParams.q?.trim() ?? "";
   const status = statusFromSearch(searchParams.status);
+  const showAddLead = searchParams.add === "1";
 
   const where: Prisma.LeadWhereInput = {
     status: status ?? undefined,
@@ -105,100 +129,129 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       ) : null}
 
       <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-ink">Neuen Lead anlegen</h2>
-        <form action={createLead} className="grid gap-4 lg:grid-cols-4">
-          <label className="block lg:col-span-2">
-            <span className="text-sm font-medium text-ink">Firma</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              name="companyName"
-              required
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Branche</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              name="industry"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Ansprechpartner</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              name="contactName"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Telefon</span>
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="phone" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">E-Mail</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              name="email"
-              type="email"
-            />
-          </label>
-          <label className="block lg:col-span-2">
-            <span className="text-sm font-medium text-ink">Website</span>
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="website" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">PLZ</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              name="postalCode"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Stadt</span>
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="city" />
-          </label>
-          <label className="block lg:col-span-2">
-            <span className="text-sm font-medium text-ink">Strasse</span>
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="street" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Bundesland</span>
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="state" />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Land</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              defaultValue="Deutschland"
-              name="country"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-ink">Quelle</span>
-            <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="source" />
-          </label>
-          <label className="block lg:col-span-2">
-            <span className="text-sm font-medium text-ink">Quell-URL</span>
-            <input
-              className="mt-1 w-full rounded-md border border-line px-3 py-2"
-              name="sourceUrl"
-            />
-          </label>
-          <label className="block lg:col-span-4">
-            <span className="text-sm font-medium text-ink">Notiz</span>
-            <textarea
-              className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2"
-              name="notes"
-            />
-          </label>
-          <div className="lg:col-span-4">
-            <button
-              className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
-              type="submit"
-            >
-              Lead anlegen
-            </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Manueller Lead</h2>
+            <p className="mt-1 text-sm text-muted">
+              Formular nur oeffnen, wenn ein Lead direkt erfasst werden soll.
+            </p>
           </div>
-        </form>
+          <Link
+            className={`w-fit rounded-md px-4 py-2 font-semibold ${
+              showAddLead
+                ? "border border-line text-ink hover:bg-field"
+                : "bg-brand text-white hover:bg-teal-800"
+            }`}
+            href={leadsHref(searchParams, { add: showAddLead ? null : "1" })}
+          >
+            {showAddLead ? "Formular schliessen" : "Lead manuell hinzufuegen"}
+          </Link>
+        </div>
+
+        {showAddLead ? (
+          <form action={createLead} className="mt-5 grid gap-4 lg:grid-cols-4">
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-ink">Firma</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="companyName"
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Branche</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="industry"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Ansprechpartner</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="contactName"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Telefon</span>
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="phone" />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">E-Mail</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="email"
+                type="email"
+              />
+            </label>
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-ink">Website</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="website"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">PLZ</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="postalCode"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Stadt</span>
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="city" />
+            </label>
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-ink">Strasse</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="street"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Bundesland</span>
+              <input className="mt-1 w-full rounded-md border border-line px-3 py-2" name="state" />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Land</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                defaultValue="Deutschland"
+                name="country"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Quelle</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="source"
+              />
+            </label>
+            <label className="block lg:col-span-2">
+              <span className="text-sm font-medium text-ink">Quell-URL</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="sourceUrl"
+              />
+            </label>
+            <label className="block lg:col-span-4">
+              <span className="text-sm font-medium text-ink">Notiz</span>
+              <textarea
+                className="mt-1 min-h-24 w-full rounded-md border border-line px-3 py-2"
+                name="notes"
+              />
+            </label>
+            <div className="lg:col-span-4">
+              <button
+                className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
+                type="submit"
+              >
+                Lead anlegen
+              </button>
+            </div>
+          </form>
+        ) : null}
       </section>
 
       <section className="rounded-lg border border-line bg-white shadow-sm">
@@ -216,10 +269,14 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
               name="status"
             >
               <option value="">Alle Status</option>
-              {leadStatusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+              {leadStatusGroups.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
             <button

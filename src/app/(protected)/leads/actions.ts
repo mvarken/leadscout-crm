@@ -27,7 +27,6 @@ import {
 import { calculateLeadScore } from "@/lib/lead-score";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { sendLeadEmail } from "@/lib/mailer";
 import { checkWebsite } from "@/lib/website-checker";
 
 const leadSchema = z.object({
@@ -243,7 +242,6 @@ export async function logLeadContact(leadId: string, formData: FormData) {
   const channel = z.nativeEnum(ContactChannel).parse(formData.get("channel"));
   const direction = z.nativeEnum(ContactDirection).parse(formData.get("direction"));
   const templateId = cleanOptional(formData.get("templateId"));
-  const sendEmail = formData.get("sendEmail") === "on";
   let subject = cleanOptional(formData.get("subject"));
   let message = cleanOptional(formData.get("message"));
   const contactedAtRaw = cleanOptional(formData.get("contactedAt"));
@@ -279,29 +277,6 @@ export async function logLeadContact(leadId: string, formData: FormData) {
     redirect(`/leads/${leadId}`);
   }
 
-  if (sendEmail) {
-    if (channel !== ContactChannel.EMAIL || direction !== ContactDirection.OUTGOING) {
-      setFlash("warning", "E-Mail-Versand ist nur fuer ausgehende E-Mails moeglich.");
-      redirect(`/leads/${leadId}`);
-    }
-
-    if (!lead.email) {
-      setFlash("error", "Lead hat keine E-Mail-Adresse.");
-      redirect(`/leads/${leadId}`);
-    }
-
-    try {
-      await sendLeadEmail({
-        to: lead.email,
-        subject: subject || "Kurzer Hinweis zu Ihrer Website",
-        text: parsedMessage.data
-      });
-    } catch {
-      setFlash("error", "E-Mail konnte nicht gesendet werden. Bitte SMTP pruefen.");
-      redirect(`/leads/${leadId}`);
-    }
-  }
-
   await prisma.lead.update({
     where: { id: leadId },
     data: {
@@ -322,7 +297,7 @@ export async function logLeadContact(leadId: string, formData: FormData) {
         create: {
           type: LeadActivityType.CONTACT_LOGGED,
           userId: user.id,
-          note: `${sendEmail ? "E-Mail gesendet" : "Kontakt protokolliert"}: ${channel}${subject ? ` - ${subject}` : ""}`
+          note: `Kontakt protokolliert: ${channel}${subject ? ` - ${subject}` : ""}`
         }
       }
     }
@@ -331,10 +306,7 @@ export async function logLeadContact(leadId: string, formData: FormData) {
   revalidatePath("/kommunikation");
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
-  setFlash(
-    "success",
-    sendEmail ? "E-Mail gesendet und Kontakt gespeichert." : "Kontakt gespeichert."
-  );
+  setFlash("success", "Kontakt gespeichert.");
 }
 
 export async function runWebsiteCheck(leadId: string) {
