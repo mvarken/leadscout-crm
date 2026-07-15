@@ -1,4 +1,4 @@
-import { BlocklistType, LeadActivityType } from "@prisma/client";
+import { BlocklistType } from "@prisma/client";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -10,8 +10,10 @@ import {
   updateLead,
   updateLeadStatus
 } from "@/app/(protected)/leads/actions";
+import { LeadHistorySection } from "@/components/lead-history-section";
 import { PageHeader } from "@/components/page-header";
 import { contactChannelLabels, contactDirectionLabels } from "@/lib/communication";
+import { formatLeadHistoryItem } from "@/lib/lead-activity-format";
 import { leadStatusGroups, leadStatusLabels, normalizeWebsite } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
 
@@ -31,15 +33,6 @@ const blocklistTypeLabels: Record<BlocklistType, string> = {
   EMAIL: "E-Mail",
   PHONE: "Telefon",
   COMPANY: "Firma"
-};
-
-const activityLabels: Record<LeadActivityType, string> = {
-  CREATED: "Angelegt",
-  UPDATED: "Aktualisiert",
-  STATUS_CHANGED: "Status geaendert",
-  NOTE_ADDED: "Notiz",
-  WEBSITE_CHECKED: "Website geprueft",
-  CONTACT_LOGGED: "Kontakt protokolliert"
 };
 
 function booleanLabel(value: boolean | null) {
@@ -78,6 +71,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
         },
         activities: {
           orderBy: { createdAt: "desc" },
+          take: 11,
           include: {
             user: {
               select: {
@@ -117,6 +111,8 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
     where: { active: true },
     orderBy: { name: "asc" }
   });
+  const historyItems = lead.activities.slice(0, 10).map(formatLeadHistoryItem);
+  const hasMoreHistory = lead.activities.length > 10;
 
   return (
     <>
@@ -384,32 +380,43 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
             )}
           </section>
 
+          <LeadHistorySection
+            initialHasMore={hasMoreHistory}
+            initialItems={historyItems}
+            leadId={lead.id}
+          />
+
           <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-ink">Historie</h2>
+            <h2 className="mb-4 text-lg font-semibold text-ink">Kontaktverlauf</h2>
             <div className="space-y-4">
-              {lead.activities.map((activity) => (
-                <article className="border-l-2 border-brand pl-4" key={activity.id}>
-                  <p className="text-sm font-semibold text-ink">{activityLabels[activity.type]}</p>
-                  <p className="text-xs text-muted">
-                    {activity.createdAt.toLocaleString("de-DE")}
-                    {activity.user?.name ? ` · ${activity.user.name}` : ""}
-                  </p>
-                  {activity.oldValue || activity.newValue ? (
-                    <p className="mt-2 text-sm text-muted">
-                      {activity.oldValue
-                        ? leadStatusLabels[activity.oldValue as keyof typeof leadStatusLabels]
-                        : ""}
-                      {activity.oldValue && activity.newValue ? " -> " : ""}
-                      {activity.newValue
-                        ? leadStatusLabels[activity.newValue as keyof typeof leadStatusLabels]
-                        : ""}
-                    </p>
+              {lead.contactLogs.map((log) => (
+                <article className="rounded-md bg-field p-3 text-sm" key={log.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-ink">
+                        {contactDirectionLabels[log.direction]} ·{" "}
+                        {contactChannelLabels[log.channel]}
+                      </p>
+                      <p className="mt-1 text-muted">{log.contactedAt.toLocaleString("de-DE")}</p>
+                    </div>
+                    {log.template?.name ? (
+                      <span className="rounded-md border border-line bg-white px-2 py-1 text-xs text-muted">
+                        {log.template.name}
+                      </span>
+                    ) : null}
+                  </div>
+                  {log.subject ? <p className="mt-3 font-medium text-ink">{log.subject}</p> : null}
+                  {log.message ? (
+                    <p className="mt-2 whitespace-pre-line text-muted">{log.message}</p>
                   ) : null}
-                  {activity.note ? (
-                    <p className="mt-2 whitespace-pre-line text-sm text-ink">{activity.note}</p>
+                  {log.user?.name ? (
+                    <p className="mt-2 text-xs text-muted">{log.user.name}</p>
                   ) : null}
                 </article>
               ))}
+              {lead.contactLogs.length === 0 ? (
+                <p className="text-sm text-muted">Noch kein Kontakt protokolliert.</p>
+              ) : null}
             </div>
           </section>
         </div>
@@ -610,40 +617,6 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
                   {lead.lastContactedAt ? lead.lastContactedAt.toLocaleDateString("de-DE") : "-"}
                 </p>
               </div>
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-ink">Kontaktverlauf</h2>
-            <div className="space-y-4">
-              {lead.contactLogs.map((log) => (
-                <article className="rounded-md bg-field p-3 text-sm" key={log.id}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-ink">
-                        {contactDirectionLabels[log.direction]} ·{" "}
-                        {contactChannelLabels[log.channel]}
-                      </p>
-                      <p className="mt-1 text-muted">{log.contactedAt.toLocaleString("de-DE")}</p>
-                    </div>
-                    {log.template?.name ? (
-                      <span className="rounded-md border border-line bg-white px-2 py-1 text-xs text-muted">
-                        {log.template.name}
-                      </span>
-                    ) : null}
-                  </div>
-                  {log.subject ? <p className="mt-3 font-medium text-ink">{log.subject}</p> : null}
-                  {log.message ? (
-                    <p className="mt-2 whitespace-pre-line text-muted">{log.message}</p>
-                  ) : null}
-                  {log.user?.name ? (
-                    <p className="mt-2 text-xs text-muted">{log.user.name}</p>
-                  ) : null}
-                </article>
-              ))}
-              {lead.contactLogs.length === 0 ? (
-                <p className="text-sm text-muted">Noch kein Kontakt protokolliert.</p>
-              ) : null}
             </div>
           </section>
 
