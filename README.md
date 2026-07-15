@@ -32,18 +32,7 @@ Passe anschliessend mindestens diese Werte an:
 
 Speichere keine echten Secrets im Repository. Die Datei `.env` ist bewusst ignoriert.
 
-Optional fuer echten E-Mail-Versand per SMTP:
-
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_SECURE`
-- `SMTP_USER`
-- `SMTP_PASSWORD`
-- `SMTP_FROM`
-- `SMTP_FROM_NAME`
-- `SMTP_REPLY_TO`
-
-Ohne SMTP-Daten koennen Kontakte weiterhin protokolliert und Vorlagen gepflegt werden, der direkte E-Mail-Versand bleibt dann deaktiviert.
+SMTP wird in der App unter `Einstellungen` gepflegt. Ohne SMTP-Daten koennen Kontakte weiterhin protokolliert und Vorlagen gepflegt werden, der direkte E-Mail-Versand bleibt dann deaktiviert.
 
 ## Docker-Start
 
@@ -112,6 +101,17 @@ Im Bereich `Kommunikation` koennen E-Mail-Vorlagen angelegt werden. Die Standard
 - `{{email}}`
 
 Beim Lead kann im Kontaktformular eine Vorlage ausgewaehlt werden. Bleiben Betreff oder Nachricht leer, werden sie aus der Vorlage und den Lead-Stammdaten erzeugt. Wenn SMTP eingerichtet ist und `E-Mail jetzt senden` aktiviert wird, versendet die App die E-Mail und speichert den Kontakt anschliessend im Verlauf.
+
+SMTP-Daten werden unter `Einstellungen` gespeichert:
+
+- SMTP-Server
+- Port
+- SSL/TLS
+- Benutzer
+- Passwort
+- Absender E-Mail
+- Absender Name
+- Antwortadresse
 
 ## Sicherheitsnotizen
 

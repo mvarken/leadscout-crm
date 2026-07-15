@@ -114,7 +114,7 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
   const recalculateLeadScoreWithId = recalculateLeadScore.bind(null, lead.id);
   const createReminderWithId = createReminder.bind(null, lead.id);
   const logLeadContactWithId = logLeadContact.bind(null, lead.id);
-  const smtpStatus = getSmtpStatus();
+  const smtpStatus = await getSmtpStatus();
   const emailTemplates = await prisma.emailTemplate.findMany({
     where: { active: true },
     orderBy: { name: "asc" }

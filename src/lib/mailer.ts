@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
 
 type SendLeadEmailInput = {
   to: string;
@@ -8,60 +9,98 @@ type SendLeadEmailInput = {
 
 const SMTP_ENV_KEYS = ["SMTP_HOST", "SMTP_PORT", "SMTP_FROM"] as const;
 
-function smtpPort() {
-  return Number.parseInt(process.env.SMTP_PORT ?? "", 10);
+type EffectiveSmtpSettings = {
+  enabled: boolean;
+  host?: string | null;
+  port: number;
+  secure: boolean;
+  user?: string | null;
+  password?: string | null;
+  fromEmail?: string | null;
+  fromName?: string | null;
+  replyTo?: string | null;
+};
+
+function smtpPort(value?: string | null) {
+  return Number.parseInt(value ?? "", 10);
 }
 
-function smtpSecure() {
-  const value = process.env.SMTP_SECURE?.toLowerCase();
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return smtpPort() === 465;
+function smtpSecure(value?: string | null, port = 587) {
+  const text = value?.toLowerCase();
+  if (text === "true") return true;
+  if (text === "false") return false;
+  return port === 465;
 }
 
-function smtpFrom() {
-  const from = process.env.SMTP_FROM?.trim();
-  const fromName = process.env.SMTP_FROM_NAME?.trim();
+function smtpFrom(settings: EffectiveSmtpSettings) {
+  const from = settings.fromEmail?.trim();
+  const fromName = settings.fromName?.trim();
   if (!from) return null;
   return fromName ? `${fromName} <${from}>` : from;
 }
 
-export function getSmtpStatus() {
-  const missing = SMTP_ENV_KEYS.filter((key) => !process.env[key]?.trim());
-  const port = smtpPort();
+async function getEffectiveSmtpSettings(): Promise<EffectiveSmtpSettings> {
+  const stored = await prisma.smtpSettings.findUnique({ where: { id: "default" } });
+  if (stored) return stored;
 
-  if (Number.isNaN(port)) {
-    missing.push("SMTP_PORT");
-  }
+  const envPort = smtpPort(process.env.SMTP_PORT);
+  return {
+    enabled: Boolean(process.env.SMTP_HOST && process.env.SMTP_FROM),
+    host: process.env.SMTP_HOST,
+    port: Number.isNaN(envPort) ? 587 : envPort,
+    secure: smtpSecure(process.env.SMTP_SECURE, envPort),
+    user: process.env.SMTP_USER,
+    password: process.env.SMTP_PASSWORD,
+    fromEmail: process.env.SMTP_FROM,
+    fromName: process.env.SMTP_FROM_NAME,
+    replyTo: process.env.SMTP_REPLY_TO
+  };
+}
+
+export async function getSmtpSettingsForForm() {
+  return prisma.smtpSettings.findUnique({ where: { id: "default" } });
+}
+
+export async function getSmtpStatus() {
+  const settings = await getEffectiveSmtpSettings();
+  const missing = [
+    !settings.enabled ? "Aktivierung" : null,
+    !settings.host?.trim() ? "SMTP-Server" : null,
+    !settings.fromEmail?.trim() ? "Absender E-Mail" : null,
+    Number.isNaN(settings.port) ? "Port" : null
+  ].filter(Boolean) as string[];
+
+  const envMissing = SMTP_ENV_KEYS.filter((key) => !process.env[key]?.trim());
 
   return {
     configured: missing.length === 0,
-    missing: Array.from(new Set(missing))
+    missing: Array.from(new Set(missing)),
+    envFallbackAvailable: envMissing.length === 0
   };
 }
 
 export async function sendLeadEmail({ to, subject, text }: SendLeadEmailInput) {
-  const status = getSmtpStatus();
-  const from = smtpFrom();
-  const port = smtpPort();
+  const settings = await getEffectiveSmtpSettings();
+  const status = await getSmtpStatus();
+  const from = smtpFrom(settings);
 
-  if (!status.configured || !from || Number.isNaN(port)) {
+  if (!status.configured || !from || Number.isNaN(settings.port)) {
     throw new Error("SMTP ist noch nicht vollstaendig eingerichtet.");
   }
 
-  const user = process.env.SMTP_USER?.trim();
-  const pass = process.env.SMTP_PASSWORD?.trim();
+  const user = settings.user?.trim();
+  const pass = settings.password?.trim();
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port,
-    secure: smtpSecure(),
+    host: settings.host ?? undefined,
+    port: settings.port,
+    secure: settings.secure,
     auth: user && pass ? { user, pass } : undefined
   });
 
   await transporter.sendMail({
     from,
     to,
-    replyTo: process.env.SMTP_REPLY_TO?.trim() || from,
+    replyTo: settings.replyTo?.trim() || from,
     subject,
     text
   });
