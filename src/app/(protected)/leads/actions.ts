@@ -13,6 +13,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { findBlocklistMatch } from "@/lib/blocklist";
+import { setFlash } from "@/lib/flash";
 import {
   cleanOptional,
   companyNameLooksSimilar,
@@ -125,12 +126,14 @@ export async function createLead(formData: FormData) {
   const blocklistMatch = await findBlocklistMatch(data);
 
   if (blocklistMatch) {
+    setFlash("error", "Lead ist durch die Ausschlussliste blockiert.");
     redirect(`/leads?blocked=${blocklistMatch.id}`);
   }
 
   const duplicate = await findDuplicateLead(data);
 
   if (duplicate) {
+    setFlash("warning", duplicate.reason ?? "Moegliches Duplikat gefunden.");
     redirect(`/leads?duplicate=${duplicate.lead.id}`);
   }
 
@@ -148,6 +151,7 @@ export async function createLead(formData: FormData) {
   });
 
   revalidatePath("/leads");
+  setFlash("success", "Lead angelegt.");
   redirect(`/leads/${lead.id}`);
 }
 
@@ -157,12 +161,14 @@ export async function updateLead(leadId: string, formData: FormData) {
   const blocklistMatch = await findBlocklistMatch(data);
 
   if (blocklistMatch) {
+    setFlash("error", "Aenderung durch die Ausschlussliste blockiert.");
     redirect(`/leads/${leadId}?edit=1&blocked=${blocklistMatch.id}`);
   }
 
   const duplicate = await findDuplicateLead({ ...data, excludeId: leadId });
 
   if (duplicate) {
+    setFlash("warning", duplicate.reason ?? "Moegliches Duplikat gefunden.");
     redirect(`/leads/${leadId}?edit=1&duplicate=${duplicate.lead.id}`);
   }
 
@@ -182,6 +188,7 @@ export async function updateLead(leadId: string, formData: FormData) {
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
+  setFlash("success", "Stammdaten gespeichert.");
   redirect(`/leads/${leadId}`);
 }
 
@@ -209,6 +216,7 @@ export async function updateLeadStatus(leadId: string, formData: FormData) {
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
+  setFlash("success", "Status gespeichert.");
 }
 
 export async function addLeadNote(leadId: string, formData: FormData) {
@@ -225,6 +233,7 @@ export async function addLeadNote(leadId: string, formData: FormData) {
   });
 
   revalidatePath(`/leads/${leadId}`);
+  setFlash("success", "Notiz gespeichert.");
 }
 
 export async function logLeadContact(leadId: string, formData: FormData) {
@@ -238,7 +247,8 @@ export async function logLeadContact(leadId: string, formData: FormData) {
   const contactedAt = contactedAtRaw ? new Date(contactedAtRaw) : new Date();
 
   if (Number.isNaN(contactedAt.getTime())) {
-    throw new Error("Ungueltiges Kontaktdatum.");
+    setFlash("error", "Ungueltiges Kontaktdatum.");
+    redirect(`/leads/${leadId}`);
   }
 
   await prisma.lead.update({
@@ -270,6 +280,7 @@ export async function logLeadContact(leadId: string, formData: FormData) {
   revalidatePath("/kommunikation");
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
+  setFlash("success", "Kontakt gespeichert.");
 }
 
 export async function runWebsiteCheck(leadId: string) {
@@ -280,6 +291,7 @@ export async function runWebsiteCheck(leadId: string) {
   });
 
   if (!lead.website) {
+    setFlash("warning", "Keine Website hinterlegt.");
     redirect(`/leads/${leadId}?websiteCheck=missing`);
   }
 
@@ -326,6 +338,10 @@ export async function runWebsiteCheck(leadId: string) {
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
+  setFlash(
+    result.websiteReachable ? "success" : "warning",
+    result.websiteReachable ? "Websitepruefung abgeschlossen." : "Website nicht erreichbar."
+  );
 }
 
 export async function recalculateLeadScore(leadId: string) {
@@ -342,6 +358,7 @@ export async function recalculateLeadScore(leadId: string) {
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
+  setFlash("success", "Lead-Score neu berechnet.");
 }
 
 export async function createReminder(leadId: string, formData: FormData) {
@@ -353,7 +370,8 @@ export async function createReminder(leadId: string, formData: FormData) {
   const dueAt = new Date(dueAtRaw);
 
   if (Number.isNaN(dueAt.getTime())) {
-    throw new Error("Ungueltiges Wiedervorlagedatum.");
+    setFlash("error", "Ungueltiges Wiedervorlagedatum.");
+    redirect(`/leads/${leadId}`);
   }
 
   await prisma.$transaction([
@@ -394,6 +412,7 @@ export async function createReminder(leadId: string, formData: FormData) {
 
   revalidatePath("/wiedervorlagen");
   revalidatePath(`/leads/${leadId}`);
+  setFlash("success", "Wiedervorlage gespeichert.");
 }
 
 export async function completeReminder(reminderId: string) {
@@ -423,4 +442,5 @@ export async function completeReminder(reminderId: string) {
 
   revalidatePath("/wiedervorlagen");
   revalidatePath(`/leads/${reminder.leadId}`);
+  setFlash("success", "Wiedervorlage erledigt.");
 }

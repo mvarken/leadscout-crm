@@ -2,8 +2,10 @@
 
 import { BlocklistType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { normalizeBlocklistValue } from "@/lib/blocklist";
+import { setFlash } from "@/lib/flash";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
@@ -19,7 +21,10 @@ export async function createBlocklistEntry(formData: FormData) {
     .parse(formData.get("note") || undefined);
   const value = normalizeBlocklistValue(type, rawValue);
 
-  if (!value) throw new Error("Ungueltiger Ausschlusslisten-Wert.");
+  if (!value) {
+    setFlash("error", "Ungueltiger Ausschlusslisten-Wert.");
+    redirect("/einstellungen");
+  }
 
   await prisma.blocklistEntry.upsert({
     where: {
@@ -40,6 +45,7 @@ export async function createBlocklistEntry(formData: FormData) {
   });
 
   revalidatePath("/einstellungen");
+  setFlash("success", "Ausschlussliste gespeichert.");
 }
 
 export async function deactivateBlocklistEntry(entryId: string) {
@@ -51,4 +57,5 @@ export async function deactivateBlocklistEntry(entryId: string) {
   });
 
   revalidatePath("/einstellungen");
+  setFlash("success", "Ausschluss entfernt.");
 }

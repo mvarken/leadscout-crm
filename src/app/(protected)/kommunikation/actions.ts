@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { setFlash } from "@/lib/flash";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
@@ -27,6 +28,7 @@ export async function createEmailTemplate(formData: FormData) {
   });
 
   revalidatePath("/kommunikation");
+  setFlash("success", "E-Mail-Vorlage gespeichert.");
 }
 
 export async function deactivateEmailTemplate(templateId: string) {
@@ -38,4 +40,5 @@ export async function deactivateEmailTemplate(templateId: string) {
   });
 
   revalidatePath("/kommunikation");
+  setFlash("success", "E-Mail-Vorlage deaktiviert.");
 }

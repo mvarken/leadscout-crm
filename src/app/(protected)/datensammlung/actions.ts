@@ -23,6 +23,7 @@ import {
 } from "@/lib/lead-utils";
 import { prisma } from "@/lib/prisma";
 import { getDirectoryProviderDefinition, searchDirectory } from "@/lib/directory-provider";
+import { setFlash } from "@/lib/flash";
 import { parseDirectoryCsv } from "@/lib/manual-import";
 import { requireUser } from "@/lib/session";
 
@@ -185,6 +186,7 @@ export async function updateDirectoryProviderConfig(formData: FormData) {
   });
 
   revalidatePath("/datensammlung");
+  setFlash("success", "Provider gespeichert.");
 }
 
 async function findDuplicate(input: {
@@ -274,6 +276,8 @@ export async function startCollectionJob(formData: FormData) {
     }
   });
 
+  let failed = false;
+
   try {
     const companies = await searchDirectory(safeInput.provider, safeInput);
     const rows = await createDirectoryResults(job.id, companies);
@@ -297,9 +301,14 @@ export async function startCollectionJob(formData: FormData) {
         finishedAt: new Date()
       }
     });
+    failed = true;
   }
 
   revalidatePath("/datensammlung");
+  setFlash(
+    failed ? "error" : "success",
+    failed ? "Suchauftrag fehlgeschlagen." : "Suchauftrag abgeschlossen."
+  );
   redirect(`/datensammlung?job=${job.id}`);
 }
 
@@ -352,6 +361,8 @@ export async function importDirectoryCsv(formData: FormData) {
     }
   });
 
+  let failed = false;
+
   try {
     const rows = await createDirectoryResults(job.id, companies);
 
@@ -384,9 +395,14 @@ export async function importDirectoryCsv(formData: FormData) {
         finishedAt: new Date()
       }
     });
+    failed = true;
   }
 
   revalidatePath("/datensammlung");
+  setFlash(
+    failed ? "error" : "success",
+    failed ? "CSV-Import fehlgeschlagen." : `${companies.length} Eintraege importiert.`
+  );
   redirect(`/datensammlung?job=${job.id}`);
 }
 
@@ -402,6 +418,7 @@ export async function convertPreviewResult(formData: FormData) {
   const duplicateReason = await findDuplicate(enrichedData);
 
   if (duplicateReason) {
+    setFlash("warning", duplicateReason);
     redirect(appendSearchParam(returnTo, "previewDuplicate", duplicateReason));
   }
 
@@ -420,6 +437,7 @@ export async function convertPreviewResult(formData: FormData) {
 
   revalidatePath("/datensammlung");
   revalidatePath("/leads");
+  setFlash("success", "Lead hinzugefuegt.");
   redirect(`/leads/${lead.id}`);
 }
 
@@ -428,6 +446,7 @@ export async function convertDirectoryResult(resultId: string) {
   const result = await prisma.directoryResult.findUniqueOrThrow({ where: { id: resultId } });
 
   if (result.status === DirectoryResultStatus.CONVERTED && result.leadId) {
+    setFlash("success", "Eintrag ist bereits als Lead vorhanden.");
     redirect(`/leads/${result.leadId}`);
   }
 
@@ -441,6 +460,7 @@ export async function convertDirectoryResult(resultId: string) {
       }
     });
     revalidatePath("/datensammlung");
+    setFlash("warning", duplicateReason);
     redirect(`/datensammlung?job=${result.jobId}`);
   }
 
@@ -478,6 +498,7 @@ export async function convertDirectoryResult(resultId: string) {
 
   revalidatePath("/datensammlung");
   revalidatePath("/leads");
+  setFlash("success", "Lead hinzugefuegt.");
   redirect(`/leads/${lead.id}`);
 }
 
@@ -489,5 +510,6 @@ export async function ignoreDirectoryResult(resultId: string) {
   });
 
   revalidatePath("/datensammlung");
+  setFlash("success", "Eintrag ignoriert.");
   redirect(`/datensammlung?job=${result.jobId}`);
 }
