@@ -151,235 +151,268 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-        <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-ink">Stammdaten</h2>
-              <p className="mt-1 text-sm text-muted">
-                {isEditingStammdaten
-                  ? "Bearbeitung aktiv"
-                  : "Festgesetzt nach Aufnahme. Zum Aendern zuerst bearbeiten."}
-              </p>
-            </div>
-            {isEditingStammdaten ? (
-              <Link
-                className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink"
-                href={`/leads/${lead.id}`}
-              >
-                Abbrechen
-              </Link>
-            ) : (
-              <Link
-                className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800"
-                href={`/leads/${lead.id}?edit=1`}
-              >
-                Bearbeiten
-              </Link>
-            )}
-          </div>
-
-          {isEditingStammdaten ? (
-            <form action={updateLeadWithId} className="grid gap-4 md:grid-cols-2">
-              <label className="block md:col-span-2">
-                <span className="text-sm font-medium text-ink">Firma</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.companyName}
-                  name="companyName"
-                  required
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Ansprechpartner</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.contactName ?? ""}
-                  name="contactName"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Branche</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.industry ?? ""}
-                  name="industry"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Telefon</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.phone ?? ""}
-                  name="phone"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">E-Mail</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.email ?? ""}
-                  name="email"
-                  type="email"
-                />
-              </label>
-              <label className="block md:col-span-2">
-                <span className="text-sm font-medium text-ink">Website</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.website ?? ""}
-                  name="website"
-                />
-              </label>
-              <label className="block md:col-span-2">
-                <span className="text-sm font-medium text-ink">Strasse</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.street ?? ""}
-                  name="street"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">PLZ</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.postalCode ?? ""}
-                  name="postalCode"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Stadt</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.city ?? ""}
-                  name="city"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Bundesland</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.state ?? ""}
-                  name="state"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Land</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.country}
-                  name="country"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Quelle</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.source ?? ""}
-                  name="source"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-ink">Quell-URL</span>
-                <input
-                  className="mt-1 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.sourceUrl ?? ""}
-                  name="sourceUrl"
-                />
-              </label>
-              <label className="block md:col-span-2">
-                <span className="text-sm font-medium text-ink">Interne Notiz</span>
-                <textarea
-                  className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
-                  defaultValue={lead.notes ?? ""}
-                  name="notes"
-                />
-              </label>
-              <div className="md:col-span-2">
-                <button
-                  className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
-                  type="submit"
+        <div className="space-y-6">
+          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-ink">Stammdaten</h2>
+                <p className="mt-1 text-sm text-muted">
+                  {isEditingStammdaten
+                    ? "Bearbeitung aktiv"
+                    : "Festgesetzt nach Aufnahme. Zum Aendern zuerst bearbeiten."}
+                </p>
+              </div>
+              {isEditingStammdaten ? (
+                <Link
+                  className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-ink"
+                  href={`/leads/${lead.id}`}
                 >
-                  Stammdaten speichern
-                </button>
-              </div>
-            </form>
-          ) : (
-            <dl className="grid gap-x-5 gap-y-4 text-sm md:grid-cols-2">
-              <div className="md:col-span-2">
-                <dt className="text-muted">Firma</dt>
-                <dd className="mt-1 font-semibold text-ink">{lead.companyName}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">Ansprechpartner</dt>
-                <dd className="mt-1 font-medium text-ink">{displayValue(lead.contactName)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">Branche</dt>
-                <dd className="mt-1 font-medium text-ink">{displayValue(lead.industry)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">Telefon</dt>
-                <dd className="mt-1 font-medium text-ink">{displayValue(lead.phone)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">E-Mail</dt>
-                <dd className="mt-1 break-all font-medium text-ink">{displayValue(lead.email)}</dd>
-              </div>
-              <div className="md:col-span-2">
-                <dt className="text-muted">Website</dt>
-                <dd className="mt-1 break-all font-medium text-ink">
-                  {normalizeWebsite(lead.website) ? (
-                    <a
-                      className="text-brand hover:underline"
-                      href={normalizeWebsite(lead.website) ?? undefined}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      {lead.website}
-                    </a>
-                  ) : (
-                    "-"
-                  )}
-                </dd>
-              </div>
-              <div className="md:col-span-2">
-                <dt className="text-muted">Adresse</dt>
-                <dd className="mt-1 font-medium text-ink">
-                  {[lead.street, lead.postalCode, lead.city, lead.state, lead.country]
-                    .filter(Boolean)
-                    .join(", ") || "-"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted">Quelle</dt>
-                <dd className="mt-1 font-medium text-ink">{displayValue(lead.source)}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">Quell-URL</dt>
-                <dd className="mt-1 break-all font-medium text-ink">
-                  {lead.sourceUrl ? (
-                    <a
-                      className="text-brand hover:underline"
-                      href={lead.sourceUrl}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      {lead.sourceUrl}
-                    </a>
-                  ) : (
-                    "-"
-                  )}
-                </dd>
-              </div>
-              <div className="md:col-span-2">
-                <dt className="text-muted">Interne Notiz</dt>
-                <dd className="mt-1 whitespace-pre-line rounded-md bg-field p-3 font-medium text-ink">
-                  {displayValue(lead.notes)}
-                </dd>
-              </div>
-            </dl>
-          )}
-        </section>
+                  Abbrechen
+                </Link>
+              ) : (
+                <Link
+                  className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-teal-800"
+                  href={`/leads/${lead.id}?edit=1`}
+                >
+                  Bearbeiten
+                </Link>
+              )}
+            </div>
+
+            {isEditingStammdaten ? (
+              <form action={updateLeadWithId} className="grid gap-4 md:grid-cols-2">
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-ink">Firma</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.companyName}
+                    name="companyName"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Ansprechpartner</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.contactName ?? ""}
+                    name="contactName"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Branche</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.industry ?? ""}
+                    name="industry"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Telefon</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.phone ?? ""}
+                    name="phone"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">E-Mail</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.email ?? ""}
+                    name="email"
+                    type="email"
+                  />
+                </label>
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-ink">Website</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.website ?? ""}
+                    name="website"
+                  />
+                </label>
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-ink">Strasse</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.street ?? ""}
+                    name="street"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">PLZ</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.postalCode ?? ""}
+                    name="postalCode"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Stadt</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.city ?? ""}
+                    name="city"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Bundesland</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.state ?? ""}
+                    name="state"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Land</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.country}
+                    name="country"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Quelle</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.source ?? ""}
+                    name="source"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-ink">Quell-URL</span>
+                  <input
+                    className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.sourceUrl ?? ""}
+                    name="sourceUrl"
+                  />
+                </label>
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-ink">Interne Notiz</span>
+                  <textarea
+                    className="mt-1 min-h-28 w-full rounded-md border border-line px-3 py-2"
+                    defaultValue={lead.notes ?? ""}
+                    name="notes"
+                  />
+                </label>
+                <div className="md:col-span-2">
+                  <button
+                    className="rounded-md bg-brand px-4 py-2 font-semibold text-white hover:bg-teal-800"
+                    type="submit"
+                  >
+                    Stammdaten speichern
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <dl className="grid gap-x-5 gap-y-4 text-sm md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <dt className="text-muted">Firma</dt>
+                  <dd className="mt-1 font-semibold text-ink">{lead.companyName}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Ansprechpartner</dt>
+                  <dd className="mt-1 font-medium text-ink">{displayValue(lead.contactName)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Branche</dt>
+                  <dd className="mt-1 font-medium text-ink">{displayValue(lead.industry)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Telefon</dt>
+                  <dd className="mt-1 font-medium text-ink">{displayValue(lead.phone)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">E-Mail</dt>
+                  <dd className="mt-1 break-all font-medium text-ink">
+                    {displayValue(lead.email)}
+                  </dd>
+                </div>
+                <div className="md:col-span-2">
+                  <dt className="text-muted">Website</dt>
+                  <dd className="mt-1 break-all font-medium text-ink">
+                    {normalizeWebsite(lead.website) ? (
+                      <a
+                        className="text-brand hover:underline"
+                        href={normalizeWebsite(lead.website) ?? undefined}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {lead.website}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </dd>
+                </div>
+                <div className="md:col-span-2">
+                  <dt className="text-muted">Adresse</dt>
+                  <dd className="mt-1 font-medium text-ink">
+                    {[lead.street, lead.postalCode, lead.city, lead.state, lead.country]
+                      .filter(Boolean)
+                      .join(", ") || "-"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Quelle</dt>
+                  <dd className="mt-1 font-medium text-ink">{displayValue(lead.source)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Quell-URL</dt>
+                  <dd className="mt-1 break-all font-medium text-ink">
+                    {lead.sourceUrl ? (
+                      <a
+                        className="text-brand hover:underline"
+                        href={lead.sourceUrl}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {lead.sourceUrl}
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </dd>
+                </div>
+                <div className="md:col-span-2">
+                  <dt className="text-muted">Interne Notiz</dt>
+                  <dd className="mt-1 whitespace-pre-line rounded-md bg-field p-3 font-medium text-ink">
+                    {displayValue(lead.notes)}
+                  </dd>
+                </div>
+              </dl>
+            )}
+          </section>
+
+          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-ink">Historie</h2>
+            <div className="space-y-4">
+              {lead.activities.map((activity) => (
+                <article className="border-l-2 border-brand pl-4" key={activity.id}>
+                  <p className="text-sm font-semibold text-ink">{activityLabels[activity.type]}</p>
+                  <p className="text-xs text-muted">
+                    {activity.createdAt.toLocaleString("de-DE")}
+                    {activity.user?.name ? ` · ${activity.user.name}` : ""}
+                  </p>
+                  {activity.oldValue || activity.newValue ? (
+                    <p className="mt-2 text-sm text-muted">
+                      {activity.oldValue
+                        ? leadStatusLabels[activity.oldValue as keyof typeof leadStatusLabels]
+                        : ""}
+                      {activity.oldValue && activity.newValue ? " -> " : ""}
+                      {activity.newValue
+                        ? leadStatusLabels[activity.newValue as keyof typeof leadStatusLabels]
+                        : ""}
+                    </p>
+                  ) : null}
+                  {activity.note ? (
+                    <p className="mt-2 whitespace-pre-line text-sm text-ink">{activity.note}</p>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
 
         <aside className="space-y-6">
           <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
@@ -682,35 +715,6 @@ export default async function LeadDetailPage({ params, searchParams }: LeadDetai
                 {lead.websiteCheckNotes}
               </p>
             ) : null}
-          </section>
-
-          <section className="rounded-lg border border-line bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-ink">Historie</h2>
-            <div className="space-y-4">
-              {lead.activities.map((activity) => (
-                <article className="border-l-2 border-brand pl-4" key={activity.id}>
-                  <p className="text-sm font-semibold text-ink">{activityLabels[activity.type]}</p>
-                  <p className="text-xs text-muted">
-                    {activity.createdAt.toLocaleString("de-DE")}
-                    {activity.user?.name ? ` · ${activity.user.name}` : ""}
-                  </p>
-                  {activity.oldValue || activity.newValue ? (
-                    <p className="mt-2 text-sm text-muted">
-                      {activity.oldValue
-                        ? leadStatusLabels[activity.oldValue as keyof typeof leadStatusLabels]
-                        : ""}
-                      {activity.oldValue && activity.newValue ? " -> " : ""}
-                      {activity.newValue
-                        ? leadStatusLabels[activity.newValue as keyof typeof leadStatusLabels]
-                        : ""}
-                    </p>
-                  ) : null}
-                  {activity.note ? (
-                    <p className="mt-2 whitespace-pre-line text-sm text-ink">{activity.note}</p>
-                  ) : null}
-                </article>
-              ))}
-            </div>
           </section>
         </aside>
       </div>
