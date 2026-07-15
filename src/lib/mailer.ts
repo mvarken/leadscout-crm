@@ -80,6 +80,27 @@ export async function getSmtpStatus() {
 }
 
 export async function sendLeadEmail({ to, subject, text }: SendLeadEmailInput) {
+  await sendEmail({ to, subject, text });
+}
+
+export async function sendSmtpTestEmail(to: string) {
+  await sendEmail({
+    to,
+    subject: "LeadScout CRM SMTP-Test",
+    text: [
+      "Hallo,",
+      "",
+      "das ist eine Testmail aus LeadScout CRM.",
+      "Wenn diese E-Mail angekommen ist, funktioniert der SMTP-Versand grundsaetzlich.",
+      "",
+      "Hinweis: SPF, DKIM und DMARC sollten fuer die Absenderdomain trotzdem sauber eingerichtet sein.",
+      "",
+      "LeadScout CRM"
+    ].join("\n")
+  });
+}
+
+async function sendEmail({ to, subject, text }: SendLeadEmailInput) {
   const settings = await getEffectiveSmtpSettings();
   const status = await getSmtpStatus();
   const from = smtpFrom(settings);

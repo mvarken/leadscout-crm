@@ -2,6 +2,7 @@ import { BlocklistType } from "@prisma/client";
 import {
   createBlocklistEntry,
   deactivateBlocklistEntry,
+  sendSmtpTest,
   updateSmtpSettings
 } from "@/app/(protected)/einstellungen/actions";
 import { PageHeader } from "@/components/page-header";
@@ -137,6 +138,29 @@ export default async function EinstellungenPage() {
             </button>
           </div>
         </form>
+        <div className="mt-5 border-t border-line pt-5">
+          <h3 className="text-sm font-semibold text-ink">Testmail senden</h3>
+          <form action={sendSmtpTest} className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+            <label className="block">
+              <span className="text-sm font-medium text-ink">Empfaenger</span>
+              <input
+                className="mt-1 w-full rounded-md border border-line px-3 py-2"
+                name="testEmail"
+                placeholder="deine-email@example.com"
+                required
+                type="email"
+              />
+            </label>
+            <div className="flex items-end">
+              <button
+                className="rounded-md border border-line px-4 py-2 font-semibold text-ink hover:bg-field"
+                type="submit"
+              >
+                Testmail senden
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <section className="mb-6 rounded-lg border border-line bg-white p-5 shadow-sm">

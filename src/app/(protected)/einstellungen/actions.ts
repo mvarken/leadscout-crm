@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { normalizeBlocklistValue } from "@/lib/blocklist";
 import { setFlash } from "@/lib/flash";
+import { sendSmtpTestEmail } from "@/lib/mailer";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
@@ -100,6 +101,21 @@ export async function updateSmtpSettings(formData: FormData) {
   revalidatePath("/einstellungen");
   revalidatePath("/kommunikation");
   setFlash("success", "SMTP-Einstellungen gespeichert.");
+}
+
+export async function sendSmtpTest(formData: FormData) {
+  await requireUser();
+  const to = z.string().trim().email().max(254).parse(formData.get("testEmail"));
+
+  try {
+    await sendSmtpTestEmail(to);
+  } catch {
+    setFlash("error", "Testmail konnte nicht gesendet werden. Bitte SMTP-Daten pruefen.");
+    redirect("/einstellungen");
+  }
+
+  setFlash("success", `Testmail wurde an ${to} gesendet.`);
+  redirect("/einstellungen");
 }
 
 function cleanSettingsValue(value: FormDataEntryValue | null) {
