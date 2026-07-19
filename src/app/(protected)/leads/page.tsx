@@ -1,6 +1,7 @@
 import { BlocklistType, LeadStatus, Prisma } from "@prisma/client";
 import Link from "next/link";
-import { createLead } from "@/app/(protected)/leads/actions";
+import { createLead, deleteLead } from "@/app/(protected)/leads/actions";
+import { DeleteLeadButton } from "@/components/delete-lead-button";
 import { PageHeader } from "@/components/page-header";
 import {
   leadStatusGroups,
@@ -289,7 +290,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
         </div>
 
         <div className="max-w-full overflow-x-auto">
-          <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[1160px] border-collapse text-left text-sm">
             <thead className="bg-field text-xs uppercase text-muted">
               <tr>
                 <th className="px-5 py-3 font-semibold">Firma</th>
@@ -300,59 +301,67 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
                 <th className="px-5 py-3 font-semibold">Kontakte</th>
                 <th className="px-5 py-3 font-semibold">Wiedervorlage</th>
                 <th className="px-5 py-3 font-semibold">Aktualisiert</th>
+                <th className="px-5 py-3 font-semibold">Aktion</th>
               </tr>
             </thead>
             <tbody>
-              {leads.map((lead) => (
-                <tr className="border-t border-line" key={lead.id}>
-                  <td className="px-5 py-4">
-                    <Link
-                      className="font-semibold text-brand hover:underline"
-                      href={`/leads/${lead.id}`}
-                    >
-                      {lead.companyName}
-                    </Link>
-                    {lead.city ? <p className="mt-1 text-muted">{lead.city}</p> : null}
-                  </td>
-                  <td className="px-5 py-4">{leadStatusLabels[lead.status]}</td>
-                  <td className="px-5 py-4 text-muted">
-                    <p>{lead.email || "Keine E-Mail"}</p>
-                    <p>{lead.phone || "Keine Telefonnummer"}</p>
-                  </td>
-                  <td className="px-5 py-4 text-muted">
-                    {lead.website ? (
-                      <a
+              {leads.map((lead) => {
+                const deleteWithId = deleteLead.bind(null, lead.id);
+
+                return (
+                  <tr className="border-t border-line" key={lead.id}>
+                    <td className="px-5 py-4">
+                      <Link
                         className="font-semibold text-brand hover:underline"
-                        href={normalizeWebsite(lead.website) ?? lead.website}
-                        rel="noreferrer"
-                        target="_blank"
+                        href={`/leads/${lead.id}`}
                       >
-                        {lead.website}
-                      </a>
-                    ) : (
-                      "Keine Website"
-                    )}
-                  </td>
-                  <td className="px-5 py-4 font-semibold text-ink">{lead.leadScore}</td>
-                  <td className="px-5 py-4 text-muted">
-                    <p className="font-semibold text-ink">{lead.contactCount}</p>
-                    <p>
-                      {lead.lastContactedAt
-                        ? lead.lastContactedAt.toLocaleDateString("de-DE")
-                        : "Noch kein Kontakt"}
-                    </p>
-                  </td>
-                  <td className="px-5 py-4 text-muted">
-                    {lead.nextFollowUpAt ? lead.nextFollowUpAt.toLocaleDateString("de-DE") : "-"}
-                  </td>
-                  <td className="px-5 py-4 text-muted">
-                    {lead.updatedAt.toLocaleDateString("de-DE")}
-                  </td>
-                </tr>
-              ))}
+                        {lead.companyName}
+                      </Link>
+                      {lead.city ? <p className="mt-1 text-muted">{lead.city}</p> : null}
+                    </td>
+                    <td className="px-5 py-4">{leadStatusLabels[lead.status]}</td>
+                    <td className="px-5 py-4 text-muted">
+                      <p>{lead.email || "Keine E-Mail"}</p>
+                      <p>{lead.phone || "Keine Telefonnummer"}</p>
+                    </td>
+                    <td className="px-5 py-4 text-muted">
+                      {lead.website ? (
+                        <a
+                          className="font-semibold text-brand hover:underline"
+                          href={normalizeWebsite(lead.website) ?? lead.website}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          {lead.website}
+                        </a>
+                      ) : (
+                        "Keine Website"
+                      )}
+                    </td>
+                    <td className="px-5 py-4 font-semibold text-ink">{lead.leadScore}</td>
+                    <td className="px-5 py-4 text-muted">
+                      <p className="font-semibold text-ink">{lead.contactCount}</p>
+                      <p>
+                        {lead.lastContactedAt
+                          ? lead.lastContactedAt.toLocaleDateString("de-DE")
+                          : "Noch kein Kontakt"}
+                      </p>
+                    </td>
+                    <td className="px-5 py-4 text-muted">
+                      {lead.nextFollowUpAt ? lead.nextFollowUpAt.toLocaleDateString("de-DE") : "-"}
+                    </td>
+                    <td className="px-5 py-4 text-muted">
+                      {lead.updatedAt.toLocaleDateString("de-DE")}
+                    </td>
+                    <td className="px-5 py-4">
+                      <DeleteLeadButton action={deleteWithId} leadName={lead.companyName} />
+                    </td>
+                  </tr>
+                );
+              })}
               {leads.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-8 text-center text-muted" colSpan={8}>
+                  <td className="px-5 py-8 text-center text-muted" colSpan={9}>
                     Noch keine Leads gefunden.
                   </td>
                 </tr>

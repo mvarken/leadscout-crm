@@ -156,6 +156,25 @@ export async function createLead(formData: FormData) {
   redirect(`/leads/${lead.id}`);
 }
 
+export async function deleteLead(leadId: string, _formData: FormData) {
+  await requireUser();
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { companyName: true }
+  });
+
+  if (!lead) {
+    setFlash("warning", "Lead wurde nicht gefunden.");
+    redirect("/leads");
+  }
+
+  await prisma.lead.delete({ where: { id: leadId } });
+
+  revalidatePath("/leads");
+  setFlash("success", `Lead "${lead.companyName}" geloescht.`);
+  redirect("/leads");
+}
+
 export async function updateLead(leadId: string, formData: FormData) {
   const user = await requireUser();
   const data = leadDataFromForm(formData);
