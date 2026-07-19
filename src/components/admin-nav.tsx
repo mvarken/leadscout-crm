@@ -24,11 +24,7 @@ export function AdminNav({ userName }: AdminNavProps) {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-line bg-white px-4 py-3 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-ink">LeadScout CRM</p>
-            <p className="truncate text-xs text-muted">{userName}</p>
-          </div>
+        <div className="flex items-center gap-3">
           <button
             aria-expanded={open}
             aria-controls="admin-menu"
@@ -39,6 +35,10 @@ export function AdminNav({ userName }: AdminNavProps) {
           >
             {open ? <X aria-hidden="true" size={20} /> : <Menu aria-hidden="true" size={20} />}
           </button>
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold text-ink">LeadScout CRM</p>
+            <p className="truncate text-xs text-muted">{userName}</p>
+          </div>
         </div>
       </header>
 
